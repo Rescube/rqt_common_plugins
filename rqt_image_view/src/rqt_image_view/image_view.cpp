@@ -42,6 +42,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QPainter>
+#include <QDebug>
 
 namespace rqt_image_view {
 
@@ -91,13 +92,13 @@ void ImageView::initPlugin(qt_gui_cpp::PluginContext& context)
 
   // second argument is the overlay topic's name
   if (context.argv().count() > 1) {
-      arg_topic_name = argv[1];
-      int index = ui_.overlay_combo_box->findText(arg_topic_name);
+      arg_overlay_name = argv[1];
+      int index = ui_.overlay_combo_box->findText(arg_overlay_name);
       if (index == -1) {
-        QString label(arg_topic_name);
+        QString label(arg_overlay_name);
         label.replace(" ", "/");
-        ui_.overlay_combo_box->addItem(label, QVariant(arg_topic_name));
-        ui_.overlay_combo_box->setCurrentIndex(ui_.overlay_combo_box->findText(arg_topic_name));
+        ui_.overlay_combo_box->addItem(label, QVariant(arg_overlay_name));
+        ui_.overlay_combo_box->setCurrentIndex(ui_.overlay_combo_box->findText(arg_overlay_name));
       }
   }
 
@@ -162,6 +163,18 @@ void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, con
     selectTopic(topic);
   }
 
+  QString overlay_topic = instance_settings.value("overlay_topic", "").toString();
+  if (!arg_overlay_name.isEmpty())
+  {
+    arg_overlay_name = "";
+  }
+  else
+  {
+    //qDebug("ImageView::restoreSettings() topic '%s'", topic.toStdString().c_str());
+    selectOverlayTopic(overlay_topic);
+  }
+
+
   bool controls_hidden = instance_settings.value("controls_hidden", false).toBool();
   tools_hide_action->setChecked(controls_hidden);
 }
@@ -210,6 +223,7 @@ void ImageView::updateTopicList()
 
   // restore previous selection
   selectTopic(selected);
+  selectOverlayTopic(selectedOverlay);
 }
 
 QList<QString> ImageView::getTopicList(const QSet<QString>& message_types, const QList<QString>& transports)
@@ -375,7 +389,7 @@ void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
   try
   {
     // First let cv_bridge do its magic
-    cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(msg, sensor_msgs::image_encodings::RGB8);
+    cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(msg, sensor_msgs::image_encodings::BGRA8);
     conversion_mat_ = cv_ptr->image;
   }
   catch (cv_bridge::Exception& e)
@@ -433,9 +447,7 @@ void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
 
     if (ui_.display_latency_check_box->isChecked()) {
       QPen pen;
-      int latency_in_ms = (ros::Time::now() - msg->header.stamp).toNSec() * 1000 * 1000;
-      //qWarning() << latency.toNSec() * 1000 * 1000;
-
+      int latency_in_ms = (ros::Time::now() - msg->header.stamp).toNSec() / 1000000;
       // latency bar color scheme:
       //  0%-33%  of full scale: green
       // 33%-66%  of full scale: yellow
@@ -445,13 +457,14 @@ void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
         pen.setColor(Qt::red);
       } else if (latency_in_ms <= ui_.full_scale_latency_spin_box->value() &&
                  latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)*2) {
-        pen.setColor(Qt::darkYellow);
+        pen.setColor(QColor::fromRgb(0xFF, 0xA5, 0x00));
       } else if (latency_in_ms <= (ui_.full_scale_latency_spin_box->value()/3)*2 &&
                  latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)) {
         pen.setColor(Qt::yellow);
       } else {
         pen.setColor(Qt::green);
       }
+
 
       pen.setWidth(4);
       overlay_painter.setPen(pen);

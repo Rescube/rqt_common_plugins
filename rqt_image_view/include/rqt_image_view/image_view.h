@@ -117,7 +117,7 @@ protected:
 
 private:
 
-  QString arg_topic_name;
+  QString arg_topic_name, arg_overlay_name;
   QAction *tools_hide_action;
 };
 
