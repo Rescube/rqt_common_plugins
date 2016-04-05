@@ -1,1 +1,6 @@
-include/rqt_image_view
+include
+/opt/qt-5.3.1/5.3/gcc_64/include
+/opt/qt-5.3.1/5.3/gcc_64/include/QtGui
+/opt/qt-5.3.1/5.3/gcc_64/include/QtCore
+/opt/qt-5.3.1/5.3/gcc_64/include/QtWidgets/
+/opt/ros/indigo/include/

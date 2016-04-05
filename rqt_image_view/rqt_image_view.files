@@ -2,3 +2,4 @@ include/rqt_image_view/image_view.h
 include/rqt_image_view/ratio_layouted_frame.h
 src/rqt_image_view/image_view.cpp
 src/rqt_image_view/ratio_layouted_frame.cpp
+src/rqt_image_view/image_view.ui

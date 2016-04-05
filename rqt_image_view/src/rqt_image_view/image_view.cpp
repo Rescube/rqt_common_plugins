@@ -67,15 +67,12 @@ void ImageView::initPlugin(qt_gui_cpp::PluginContext& context)
   ui_.topics_combo_box->setCurrentIndex(ui_.topics_combo_box->findText(""));
   connect(ui_.topics_combo_box, SIGNAL(currentIndexChanged(int)), this, SLOT(onTopicChanged(int)));
 
-  ui_.refresh_topics_push_button->setIcon(QIcon::fromTheme("view-refresh"));
   connect(ui_.refresh_topics_push_button, SIGNAL(pressed()), this, SLOT(updateTopicList()));
 
-  ui_.zoom_1_push_button->setIcon(QIcon::fromTheme("zoom-original"));
   connect(ui_.zoom_1_push_button, SIGNAL(toggled(bool)), this, SLOT(onZoom1(bool)));
 
   connect(ui_.dynamic_range_check_box, SIGNAL(toggled(bool)), this, SLOT(onDynamicRange(bool)));
 
-  ui_.save_as_image_push_button->setIcon(QIcon::fromTheme("image-x-generic"));
   connect(ui_.save_as_image_push_button, SIGNAL(pressed()), this, SLOT(saveImage()));
 
   // set topic name if passed in as argument
@@ -91,6 +88,24 @@ void ImageView::initPlugin(qt_gui_cpp::PluginContext& context)
       ui_.topics_combo_box->setCurrentIndex(ui_.topics_combo_box->findText(arg_topic_name));
     }
   }
+
+  // second argument is the overlay topic's name
+  if (context.argv().count() > 1) {
+      arg_topic_name = argv[1];
+      int index = ui_.overlay_combo_box->findText(arg_topic_name);
+      if (index == -1) {
+        QString label(arg_topic_name);
+        label.replace(" ", "/");
+        ui_.overlay_combo_box->addItem(label, QVariant(arg_topic_name));
+        ui_.overlay_combo_box->setCurrentIndex(ui_.overlay_combo_box->findText(arg_topic_name));
+      }
+  }
+
+  tools_hide_action = new QAction(tr("Hide toolbar"), this);
+  tools_hide_action->setCheckable(true);
+  ui_.image_frame->addAction(tools_hide_action);
+
+  connect(tools_hide_action, SIGNAL(toggled(bool)), this, SLOT(set_controls_visiblity(bool)));
 }
 
 void ImageView::shutdownPlugin()
@@ -101,11 +116,16 @@ void ImageView::shutdownPlugin()
 void ImageView::saveSettings(qt_gui_cpp::Settings& plugin_settings, qt_gui_cpp::Settings& instance_settings) const
 {
   QString topic = ui_.topics_combo_box->currentText();
+  QString overlay_topic = ui_.overlay_combo_box->currentText();
   //qDebug("ImageView::saveSettings() topic '%s'", topic.toStdString().c_str());
   instance_settings.setValue("topic", topic);
+  instance_settings.setValue("overlay_topic", overlay_topic);
   instance_settings.setValue("zoom1", ui_.zoom_1_push_button->isChecked());
   instance_settings.setValue("dynamic_range", ui_.dynamic_range_check_box->isChecked());
+  instance_settings.setValue("controls_hidden", tools_hide_action->isChecked());
   instance_settings.setValue("max_range", ui_.max_range_double_spin_box->value());
+  instance_settings.setValue("display_latency", ui_.display_latency_check_box->isChecked());
+  instance_settings.setValue("full_scale_latency", ui_.full_scale_latency_spin_box->value());
 }
 
 void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, const qt_gui_cpp::Settings& instance_settings)
@@ -119,6 +139,17 @@ void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, con
   double max_range = instance_settings.value("max_range", ui_.max_range_double_spin_box->value()).toDouble();
   ui_.max_range_double_spin_box->setValue(max_range);
 
+  bool display_latency = instance_settings.value("display_latency", false).toBool();
+  ui_.display_latency_check_box->setChecked(display_latency);
+
+  if (!display_latency) {
+      ui_.max_latency_label->setVisible(false);
+      ui_.full_scale_latency_spin_box->setVisible(false);
+  }
+
+  int full_scale_latency = instance_settings.value("full_scale_latency", ui_.full_scale_latency_spin_box->value()).toInt();
+  ui_.full_scale_latency_spin_box->setValue(full_scale_latency);
+
   QString topic = instance_settings.value("topic", "").toString();
   // don't overwrite topic name passed as command line argument
   if (!arg_topic_name.isEmpty())
@@ -130,6 +161,9 @@ void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, con
     //qDebug("ImageView::restoreSettings() topic '%s'", topic.toStdString().c_str());
     selectTopic(topic);
   }
+
+  bool controls_hidden = instance_settings.value("controls_hidden", false).toBool();
+  tools_hide_action->setChecked(controls_hidden);
 }
 
 void ImageView::updateTopicList()
@@ -158,17 +192,20 @@ void ImageView::updateTopicList()
   }
 
   QString selected = ui_.topics_combo_box->currentText();
+  QString selectedOverlay = ui_.overlay_combo_box->currentText();
 
   // fill combo box
   QList<QString> topics = getTopics(message_types, message_sub_types, transports).values();
   topics.append("");
   qSort(topics);
   ui_.topics_combo_box->clear();
+  ui_.overlay_combo_box->clear();
   for (QList<QString>::const_iterator it = topics.begin(); it != topics.end(); it++)
   {
     QString label(*it);
     label.replace(" ", "/");
     ui_.topics_combo_box->addItem(label, QVariant(*it));
+    ui_.overlay_combo_box->addItem(label, QVariant(*it));
   }
 
   // restore previous selection
@@ -239,6 +276,16 @@ void ImageView::selectTopic(const QString& topic)
   ui_.topics_combo_box->setCurrentIndex(index);
 }
 
+void ImageView::selectOverlayTopic(const QString& topic)
+{
+  int index = ui_.overlay_combo_box->findText(topic);
+  if (index == -1)
+  {
+    index = ui_.overlay_combo_box->findText("");
+  }
+  ui_.overlay_combo_box->setCurrentIndex(index);
+}
+
 void ImageView::onTopicChanged(int index)
 {
   subscriber_.shutdown();
@@ -257,6 +304,27 @@ void ImageView::onTopicChanged(int index)
     try {
       subscriber_ = it.subscribe(topic.toStdString(), 1, &ImageView::callbackImage, this, hints);
       //qDebug("ImageView::onTopicChanged() to topic '%s' with transport '%s'", topic.toStdString().c_str(), subscriber_.getTransport().c_str());
+    } catch (image_transport::TransportLoadException& e) {
+      QMessageBox::warning(widget_, tr("Loading image transport plugin failed"), e.what());
+    }
+  }
+}
+
+void ImageView::onOverlayChanged(int index)
+{
+  subscriber_.shutdown();
+
+  QStringList parts = ui_.overlay_combo_box->itemData(index).toString().split(" ");
+  QString topic = parts.first();
+  QString transport = parts.length() == 2 ? parts.last() : "raw";
+
+  if (!topic.isEmpty())
+  {
+    image_transport::ImageTransport it(getNodeHandle());
+    image_transport::TransportHints hints(transport.toStdString());
+    try {
+      overlay_subscriber_ = it.subscribe(topic.toStdString(), 1, &ImageView::callbackOverlay, this, hints);
+      //qDebug("ImageView::onOverlayChanged() to topic '%s' with transport '%s'", topic.toStdString().c_str(), overlay_subscriber_.getTransport().c_str());
     } catch (image_transport::TransportLoadException& e) {
       QMessageBox::warning(widget_, tr("Loading image transport plugin failed"), e.what());
     }
@@ -356,7 +424,44 @@ void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
   }
 
   // image must be copied since it uses the conversion_mat_ for storage which is asynchronously overwritten in the next callback invocation
-  QImage image(conversion_mat_.data, conversion_mat_.cols, conversion_mat_.rows, conversion_mat_.step[0], QImage::Format_RGB888);
+  QImage image(conversion_mat_.data, conversion_mat_.cols, conversion_mat_.rows, conversion_mat_.step[0], QImage::Format_ARGB32);
+
+  if (!ui_.overlay_combo_box->currentText().isEmpty()) {
+    QPainter overlay_painter(&image);
+    overlay_painter.setCompositionMode(QPainter::CompositionMode_DestinationOver);
+    overlay_painter.drawImage(0, 0, overlayImage);
+
+    if (ui_.display_latency_check_box->isChecked()) {
+      QPen pen;
+      int latency_in_ms = (ros::Time::now() - msg->header.stamp).toNSec() * 1000 * 1000;
+      //qWarning() << latency.toNSec() * 1000 * 1000;
+
+      // latency bar color scheme:
+      //  0%-33%  of full scale: green
+      // 33%-66%  of full scale: yellow
+      // 66%-100% of full scale: darkyellow
+      // >100%    of full scale: red
+      if (latency_in_ms > ui_.full_scale_latency_spin_box->value()) {
+        pen.setColor(Qt::red);
+      } else if (latency_in_ms <= ui_.full_scale_latency_spin_box->value() &&
+                 latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)*2) {
+        pen.setColor(Qt::darkYellow);
+      } else if (latency_in_ms <= (ui_.full_scale_latency_spin_box->value()/3)*2 &&
+                 latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)) {
+        pen.setColor(Qt::yellow);
+      } else {
+        pen.setColor(Qt::green);
+      }
+
+      pen.setWidth(4);
+      overlay_painter.setPen(pen);
+      double latency_bar_width = (image.width() / ui_.full_scale_latency_spin_box->value()) * latency_in_ms;
+      if (latency_bar_width > image.width())
+        latency_bar_width = image.width();
+      overlay_painter.drawLine(0, 0, latency_bar_width, 0);
+    }
+  }
+
   ui_.image_frame->setImage(image);
 
   if (!ui_.zoom_1_push_button->isEnabled())
@@ -364,6 +469,70 @@ void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
     ui_.zoom_1_push_button->setEnabled(true);
     onZoom1(ui_.zoom_1_push_button->isChecked());
   }
+}
+
+
+void ImageView::callbackOverlay(const sensor_msgs::Image::ConstPtr& msg)
+{
+  try
+  {
+    // First let cv_bridge do its magic
+    cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(msg, sensor_msgs::image_encodings::RGB8);
+    conversion_mat_ = cv_ptr->image;
+  }
+  catch (cv_bridge::Exception& e)
+  {
+    try
+    {
+      // If we're here, there is no conversion that makes sense, but let's try to imagine a few first
+      cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(msg);
+      if (msg->encoding == "CV_8UC3")
+      {
+        // assuming it is rgb
+        conversion_mat_ = cv_ptr->image;
+      } else if (msg->encoding == "8UC1") {
+        // convert gray to rgb
+        cv::cvtColor(cv_ptr->image, conversion_mat_, CV_GRAY2RGB);
+      } else if (msg->encoding == "16UC1" || msg->encoding == "32FC1") {
+        // scale / quantify
+        double min = 0;
+        double max = ui_.max_range_double_spin_box->value();
+        if (msg->encoding == "16UC1") max *= 1000;
+        if (ui_.dynamic_range_check_box->isChecked())
+        {
+          // dynamically adjust range based on min/max in image
+          cv::minMaxLoc(cv_ptr->image, &min, &max);
+          if (min == max) {
+            // completely homogeneous images are displayed in gray
+            min = 0;
+            max = 2;
+          }
+        }
+        cv::Mat img_scaled_8u;
+        cv::Mat(cv_ptr->image-min).convertTo(img_scaled_8u, CV_8UC1, 255. / (max - min));
+        cv::cvtColor(img_scaled_8u, conversion_mat_, CV_GRAY2RGB);
+      } else {
+        qWarning("ImageView.callback_image() could not convert image from '%s' to 'rgb8' (%s)", msg->encoding.c_str(), e.what());
+        ui_.image_frame->setImage(QImage());
+        return;
+      }
+    }
+    catch (cv_bridge::Exception& e)
+    {
+      qWarning("ImageView.callback_image() while trying to convert image from '%s' to 'rgb8' an exception was thrown (%s)", msg->encoding.c_str(), e.what());
+      ui_.image_frame->setImage(QImage());
+      return;
+    }
+  }
+
+  // image must be copied since it uses the conversion_mat_ for storage which is asynchronously overwritten in the next callback invocation
+  overlayImage = QImage(conversion_mat_.data, conversion_mat_.cols, conversion_mat_.rows, conversion_mat_.step[0], QImage::Format_ARGB32);
+}
+
+
+void rqt_image_view::ImageView::set_controls_visiblity(bool hide)
+{
+    ui_.controlsWidget->setVisible(!hide);
 }
 
 }
