@@ -503,12 +503,11 @@ void ImageView::callbackOverlay(const sensor_msgs::Image::ConstPtr& msg)
     return;
   }
   // image must be copied since it uses the conversion_mat_ for storage which is asynchronously overwritten in the next callback invocation
-  overlay_image.fill(Qt::white);
   overlay_image = QImage(conversion_mat_overlay.data,
                          conversion_mat_overlay.cols,
                          conversion_mat_overlay.rows,
                          conversion_mat_overlay.step[0],
-      QImage::Format_ARGB32);
+      QImage::Format_ARGB32).copy();
 }
 
 
