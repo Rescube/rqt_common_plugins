@@ -67,6 +67,7 @@ void ImageView::initPlugin(qt_gui_cpp::PluginContext& context)
   updateTopicList();
   ui_.topics_combo_box->setCurrentIndex(ui_.topics_combo_box->findText(""));
   connect(ui_.topics_combo_box, SIGNAL(currentIndexChanged(int)), this, SLOT(onTopicChanged(int)));
+  connect(ui_.overlay_combo_box, SIGNAL(currentIndexChanged(int)), this, SLOT(onOverlayChanged(int)));
 
   connect(ui_.refresh_topics_push_button, SIGNAL(pressed()), this, SLOT(updateTopicList()));
 
@@ -92,14 +93,14 @@ void ImageView::initPlugin(qt_gui_cpp::PluginContext& context)
 
   // second argument is the overlay topic's name
   if (context.argv().count() > 1) {
-      arg_overlay_name = argv[1];
-      int index = ui_.overlay_combo_box->findText(arg_overlay_name);
-      if (index == -1) {
-        QString label(arg_overlay_name);
-        label.replace(" ", "/");
-        ui_.overlay_combo_box->addItem(label, QVariant(arg_overlay_name));
-        ui_.overlay_combo_box->setCurrentIndex(ui_.overlay_combo_box->findText(arg_overlay_name));
-      }
+    arg_overlay_name = argv[1];
+    int index = ui_.overlay_combo_box->findText(arg_overlay_name);
+    if (index == -1) {
+      QString label(arg_overlay_name);
+      label.replace(" ", "/");
+      ui_.overlay_combo_box->addItem(label, QVariant(arg_overlay_name));
+      ui_.overlay_combo_box->setCurrentIndex(ui_.overlay_combo_box->findText(arg_overlay_name));
+    }
   }
 
   tools_hide_action = new QAction(tr("Hide toolbar"), this);
@@ -144,8 +145,8 @@ void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, con
   ui_.display_latency_check_box->setChecked(display_latency);
 
   if (!display_latency) {
-      ui_.max_latency_label->setVisible(false);
-      ui_.full_scale_latency_spin_box->setVisible(false);
+    ui_.max_latency_label->setVisible(false);
+    ui_.full_scale_latency_spin_box->setVisible(false);
   }
 
   int full_scale_latency = instance_settings.value("full_scale_latency", ui_.full_scale_latency_spin_box->value()).toInt();
@@ -326,7 +327,7 @@ void ImageView::onTopicChanged(int index)
 
 void ImageView::onOverlayChanged(int index)
 {
-  subscriber_.shutdown();
+  overlay_subscriber_.shutdown();
 
   QStringList parts = ui_.overlay_combo_box->itemData(index).toString().split(" ");
   QString topic = parts.first();
@@ -389,107 +390,6 @@ void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
   try
   {
     // First let cv_bridge do its magic
-    cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(msg, sensor_msgs::image_encodings::BGRA8);
-    conversion_mat_ = cv_ptr->image;
-  }
-  catch (cv_bridge::Exception& e)
-  {
-    try
-    {
-      // If we're here, there is no conversion that makes sense, but let's try to imagine a few first
-      cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(msg);
-      if (msg->encoding == "CV_8UC3")
-      {
-        // assuming it is rgb
-        conversion_mat_ = cv_ptr->image;
-      } else if (msg->encoding == "8UC1") {
-        // convert gray to rgb
-        cv::cvtColor(cv_ptr->image, conversion_mat_, CV_GRAY2RGB);
-      } else if (msg->encoding == "16UC1" || msg->encoding == "32FC1") {
-        // scale / quantify
-        double min = 0;
-        double max = ui_.max_range_double_spin_box->value();
-        if (msg->encoding == "16UC1") max *= 1000;
-        if (ui_.dynamic_range_check_box->isChecked())
-        {
-          // dynamically adjust range based on min/max in image
-          cv::minMaxLoc(cv_ptr->image, &min, &max);
-          if (min == max) {
-            // completely homogeneous images are displayed in gray
-            min = 0;
-            max = 2;
-          }
-        }
-        cv::Mat img_scaled_8u;
-        cv::Mat(cv_ptr->image-min).convertTo(img_scaled_8u, CV_8UC1, 255. / (max - min));
-        cv::cvtColor(img_scaled_8u, conversion_mat_, CV_GRAY2RGB);
-      } else {
-        qWarning("ImageView.callback_image() could not convert image from '%s' to 'rgb8' (%s)", msg->encoding.c_str(), e.what());
-        ui_.image_frame->setImage(QImage());
-        return;
-      }
-    }
-    catch (cv_bridge::Exception& e)
-    {
-      qWarning("ImageView.callback_image() while trying to convert image from '%s' to 'rgb8' an exception was thrown (%s)", msg->encoding.c_str(), e.what());
-      ui_.image_frame->setImage(QImage());
-      return;
-    }
-  }
-
-  // image must be copied since it uses the conversion_mat_ for storage which is asynchronously overwritten in the next callback invocation
-  QImage image(conversion_mat_.data, conversion_mat_.cols, conversion_mat_.rows, conversion_mat_.step[0], QImage::Format_ARGB32);
-
-  if (!ui_.overlay_combo_box->currentText().isEmpty()) {
-    QPainter overlay_painter(&image);
-    overlay_painter.setCompositionMode(QPainter::CompositionMode_DestinationOver);
-    overlay_painter.drawImage(0, 0, overlayImage);
-
-    if (ui_.display_latency_check_box->isChecked()) {
-      QPen pen;
-      int latency_in_ms = (ros::Time::now() - msg->header.stamp).toNSec() / 1000000;
-      // latency bar color scheme:
-      //  0%-33%  of full scale: green
-      // 33%-66%  of full scale: yellow
-      // 66%-100% of full scale: darkyellow
-      // >100%    of full scale: red
-      if (latency_in_ms > ui_.full_scale_latency_spin_box->value()) {
-        pen.setColor(Qt::red);
-      } else if (latency_in_ms <= ui_.full_scale_latency_spin_box->value() &&
-                 latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)*2) {
-        pen.setColor(QColor::fromRgb(0xFF, 0xA5, 0x00));
-      } else if (latency_in_ms <= (ui_.full_scale_latency_spin_box->value()/3)*2 &&
-                 latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)) {
-        pen.setColor(Qt::yellow);
-      } else {
-        pen.setColor(Qt::green);
-      }
-
-
-      pen.setWidth(4);
-      overlay_painter.setPen(pen);
-      double latency_bar_width = (image.width() / ui_.full_scale_latency_spin_box->value()) * latency_in_ms;
-      if (latency_bar_width > image.width())
-        latency_bar_width = image.width();
-      overlay_painter.drawLine(0, 0, latency_bar_width, 0);
-    }
-  }
-
-  ui_.image_frame->setImage(image);
-
-  if (!ui_.zoom_1_push_button->isEnabled())
-  {
-    ui_.zoom_1_push_button->setEnabled(true);
-    onZoom1(ui_.zoom_1_push_button->isChecked());
-  }
-}
-
-
-void ImageView::callbackOverlay(const sensor_msgs::Image::ConstPtr& msg)
-{
-  try
-  {
-    // First let cv_bridge do its magic
     cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(msg, sensor_msgs::image_encodings::RGB8);
     conversion_mat_ = cv_ptr->image;
   }
@@ -539,13 +439,82 @@ void ImageView::callbackOverlay(const sensor_msgs::Image::ConstPtr& msg)
   }
 
   // image must be copied since it uses the conversion_mat_ for storage which is asynchronously overwritten in the next callback invocation
-  overlayImage = QImage(conversion_mat_.data, conversion_mat_.cols, conversion_mat_.rows, conversion_mat_.step[0], QImage::Format_ARGB32);
+  QImage image(conversion_mat_.data, conversion_mat_.cols, conversion_mat_.rows, conversion_mat_.step[0], QImage::Format_RGB888);
+
+  if (!ui_.overlay_combo_box->currentText().isEmpty() && !overlay_image.isNull()) {
+    // if overlay is selected paint the image onto the overlayimage
+    // technically we are painting it over
+    QPainter overlay_painter(&image);
+    overlay_painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    overlay_painter.drawImage(0, 0, overlay_image);
+
+    if (ui_.display_latency_check_box->isChecked()) {
+      QPen pen;
+      int latency_in_ms = (ros::Time::now() - msg->header.stamp).toNSec() / 1000000;
+      // latency bar color scheme:
+      //  0%-33%  of full scale: green
+      // 33%-66%  of full scale: yellow
+      // 66%-100% of full scale: darkyellow
+      // >100%    of full scale: red
+      if (latency_in_ms > ui_.full_scale_latency_spin_box->value()) {
+        pen.setColor(Qt::red);
+      } else if (latency_in_ms <= ui_.full_scale_latency_spin_box->value() &&
+                 latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)*2) {
+        pen.setColor(QColor::fromRgb(0xFF, 0xA5, 0x00));
+      } else if (latency_in_ms <= (ui_.full_scale_latency_spin_box->value()/3)*2 &&
+                 latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)) {
+        pen.setColor(Qt::yellow);
+      } else {
+        pen.setColor(Qt::green);
+      }
+
+      pen.setWidth(4);
+      overlay_painter.setPen(pen);
+      double latency_bar_width = (image.width() / ui_.full_scale_latency_spin_box->value()) * latency_in_ms;
+      if (latency_bar_width > image.width())
+        latency_bar_width = image.width();
+      overlay_painter.drawLine(0, 0, latency_bar_width, 0);
+    }
+    ui_.image_frame->setImage(image);
+  } else {
+    // if no overlay selected draw the image
+    ui_.image_frame->setImage(image);
+  }
+
+  if (!ui_.zoom_1_push_button->isEnabled())
+  {
+    ui_.zoom_1_push_button->setEnabled(true);
+    onZoom1(ui_.zoom_1_push_button->isChecked());
+  }
+}
+
+
+void ImageView::callbackOverlay(const sensor_msgs::Image::ConstPtr& msg)
+{
+  try
+  {
+    // First let cv_bridge do its magic
+    cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(msg, sensor_msgs::image_encodings::BGRA8);
+    conversion_mat_overlay = cv_ptr->image;
+  }
+  catch (cv_bridge::Exception& e)
+  {
+    qWarning("ImageView.callback_image() could not convert image to 'bgra8' (%s)", e.what());
+    return;
+  }
+  // image must be copied since it uses the conversion_mat_ for storage which is asynchronously overwritten in the next callback invocation
+  overlay_image.fill(Qt::white);
+  overlay_image = QImage(conversion_mat_overlay.data,
+                         conversion_mat_overlay.cols,
+                         conversion_mat_overlay.rows,
+                         conversion_mat_overlay.step[0],
+      QImage::Format_ARGB32);
 }
 
 
 void rqt_image_view::ImageView::set_controls_visiblity(bool hide)
 {
-    ui_.controlsWidget->setVisible(!hide);
+  ui_.controlsWidget->setVisible(!hide);
 }
 
 }

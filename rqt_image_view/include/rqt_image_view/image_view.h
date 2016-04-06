@@ -112,8 +112,9 @@ protected:
   image_transport::Subscriber overlay_subscriber_;
 
   cv::Mat conversion_mat_;
+  cv::Mat conversion_mat_overlay;
 
-  QImage overlayImage;
+  QImage overlay_image;
 
 private:
 
