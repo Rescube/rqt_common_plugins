@@ -1,0 +1,25 @@
+<package>
+  <name>rqt_send_file</name>
+  <version>0.1.0</version>
+  <description>rqt_send_file provides a GUI plugin for publishing a file's content to a specified string topic.</description>
+  <maintainer email="martonmiklosqdev@gmail.com">Miklos Marton</maintainer>
+
+  <license>BSD</license>
+
+  <url type="website">http://ros.org/wiki/rqt_send_file</url>
+  <url type="repository">https://github.com/ros-visualization/rqt_common_plugins</url>
+  <url type="bugtracker">https://github.com/ros-visualization/rqt_common_plugins/issues</url>
+
+  <author>Miklos Marton</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>rqt_gui</build_depend>
+  <build_depend>rqt_gui_cpp</build_depend>
+  <run_depend>rqt_gui</run_depend>
+  <run_depend>rqt_gui_cpp</run_depend>
+
+  <export>
+    <rqt_gui plugin="${prefix}/plugin.xml"/>
+  </export>
+</package>

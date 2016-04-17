@@ -1,0 +1,6 @@
+/**
+\mainpage
+\htmlinclude manifest.html
+
+\b rqt_send_file provides a GUI plugin for publishing a file's content to a topic
+*/

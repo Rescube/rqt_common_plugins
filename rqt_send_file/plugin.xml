@@ -1,0 +1,17 @@
+<library path="lib/librqt_send_file">
+  <class name="rqt_send_file/SendFile" type="rqt_send_file::SendFile" base_class_type="rqt_gui_cpp::Plugin">
+    <description>
+      A GUI plugin for publishing a file's content to a topic
+    </description>
+    <qtgui>
+      <group>
+        <label>Miscellaneous Tools</label>
+        <icon type="theme">folder</icon>
+        <statustip>Plugins related to miscellaneous tools.</statustip>
+      </group>
+      <label>Send file</label>
+      <icon type="theme">text-x-generic</icon>
+      <statustip>a GUI plugin for publishing a file's content to a topic</statustip>
+    </qtgui>
+  </class>
+</library>
