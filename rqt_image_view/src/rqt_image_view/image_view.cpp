@@ -142,8 +142,6 @@ void ImageView::saveSettings(qt_gui_cpp::Settings& plugin_settings, qt_gui_cpp::
   instance_settings.setValue("mouse_pub_topic", ui_.publish_click_location_topic_line_edit->text());
 }
 
-}
-
 void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, const qt_gui_cpp::Settings& instance_settings)
 {
   bool zoom1_checked = instance_settings.value("zoom1", false).toBool();

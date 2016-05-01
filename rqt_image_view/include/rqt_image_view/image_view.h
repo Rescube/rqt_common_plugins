@@ -106,12 +106,6 @@ protected slots:
 
   virtual void onPubTopicChanged();
 
-
-
-  virtual void onMouseLeft(int x, int y);
-
-  virtual void onPubTopicChanged();
-
 protected:
 
   virtual void callbackImage(const sensor_msgs::Image::ConstPtr& msg);
