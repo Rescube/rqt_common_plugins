@@ -40,6 +40,7 @@
 #include <image_transport/image_transport.h>
 #include <ros/macros.h>
 #include <sensor_msgs/Image.h>
+#include <geometry_msgs/Point.h>
 
 #include <opencv2/core/core.hpp>
 
@@ -96,8 +97,20 @@ protected slots:
   virtual void onDynamicRange(bool checked);
 
   virtual void saveImage();
-
+  
   virtual void set_controls_visiblity(bool show);
+  
+  virtual void onMousePublish(bool checked);
+
+  virtual void onMouseLeft(int x, int y);
+
+  virtual void onPubTopicChanged();
+
+
+
+  virtual void onMouseLeft(int x, int y);
+
+  virtual void onPubTopicChanged();
 
 protected:
 
@@ -117,6 +130,9 @@ protected:
   QImage overlay_image;
 
 private:
+  ros::Publisher pub_mouse_left_;
+
+  bool pub_topic_custom_;
 
   QString arg_topic_name, arg_overlay_name;
   QAction *tools_hide_action;
