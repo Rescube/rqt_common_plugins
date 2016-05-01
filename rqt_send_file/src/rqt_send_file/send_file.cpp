@@ -51,9 +51,6 @@ void SendFile::restoreSettings(const qt_gui_cpp::Settings &plugin_settings, cons
 
 SendFile::~SendFile()
 {
-    if (widget != NULL) {
-        delete widget;
-    }
 }
 
 } // end namespace rqt_send_file
