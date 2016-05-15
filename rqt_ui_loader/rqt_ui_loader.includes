@@ -1,0 +1,8 @@
+include/rqt_ui_loader
+include
+/opt/qt-5.3.1/5.3/gcc_64/include/QtGui
+/opt/qt-5.3.1/5.3/gcc_64/include/QtCore
+/opt/qt-5.3.1/5.3/gcc_64/include/QtWidgets
+/opt/qt-5.3.1/5.3/gcc_64/include
+/opt/ros/indigo/include
+/home/mm/Projektek/rescube/r16_ws/build/rqt_common_plugins/rqt_ui_loader

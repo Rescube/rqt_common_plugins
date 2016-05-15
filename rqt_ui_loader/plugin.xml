@@ -1,0 +1,17 @@
+<library path="lib/librqt_ui_loader">
+  <class name="rqt_ui_loader/UILoader" type="rqt_ui_loader::UILoader" base_class_type="rqt_gui_cpp::Plugin">
+    <description>
+      A plugin to load widgets from UI files to display or publish topics.
+    </description>
+    <qtgui>
+      <group>
+        <label>Visualization</label>
+        <icon type="theme">folder</icon>
+        <statustip>Plugins related to visualization.</statustip>
+      </group>
+      <label>UI loader</label>
+      <icon type="theme">image-x-generic</icon>
+      <statustip>A plugin to load widgets from UI files to display or publish topics.</statustip>
+    </qtgui>
+  </class>
+</library>
