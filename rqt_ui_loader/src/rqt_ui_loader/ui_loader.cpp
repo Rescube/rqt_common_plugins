@@ -29,13 +29,15 @@ void UILoader::shutdownPlugin()
 void UILoader::saveSettings(qt_gui_cpp::Settings &plugin_settings, qt_gui_cpp::Settings &instance_settings) const
 {
     if (widget != NULL) {
-
+        instance_settings.setValue("filePath", widget->getFilePath());
     }
 }
 
 void UILoader::restoreSettings(const qt_gui_cpp::Settings &plugin_settings, const qt_gui_cpp::Settings &instance_settings)
 {
     if (widget != NULL) {
+        QString filePath = instance_settings.value("filePath").toString();
+        widget->loadUIFile(filePath);
     }
 }
 
