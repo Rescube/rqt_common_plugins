@@ -23,29 +23,26 @@
       <property name="spacing">
        <number>6</number>
       </property>
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
+      <property name="margin">
        <number>0</number>
       </property>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
          <widget class="QComboBox" name="topics_combo_box">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="sizeAdjustPolicy">
            <enum>QComboBox::AdjustToContents</enum>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="refresh_topics_push_button">
+         <widget class="QToolButton" name="refresh_topics_push_button">
           <property name="icon">
            <iconset theme="view-refresh">
             <normaloff/>
@@ -98,7 +95,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="save_as_image_push_button">
+         <widget class="QToolButton" name="save_as_image_push_button">
           <property name="toolTip">
            <string>Save as image</string>
           </property>
@@ -116,7 +113,14 @@
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="overlay_combo_box"/>
+         <widget class="QComboBox" name="overlay_combo_box">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QCheckBox" name="display_latency_check_box">
@@ -156,9 +160,12 @@
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Minimum</enum>
+          </property>
           <property name="sizeHint" stdset="0">
            <size>
-            <width>40</width>
+            <width>0</width>
             <height>20</height>
            </size>
           </property>
@@ -207,16 +214,6 @@
        </layout>
       </item>
      </layout>
-     <zorder>topics_combo_box</zorder>
-     <zorder>refresh_topics_push_button</zorder>
-     <zorder>zoom_1_push_button</zorder>
-     <zorder>dynamic_range_check_box</zorder>
-     <zorder>max_range_double_spin_box</zorder>
-     <zorder>save_as_image_push_button</zorder>
-     <zorder>overlay_combo_box</zorder>
-     <zorder>display_latency_check_box</zorder>
-     <zorder>max_latency_label</zorder>
-     <zorder>full_scale_latency_spin_box</zorder>
      <zorder></zorder>
      <zorder></zorder>
     </widget>
