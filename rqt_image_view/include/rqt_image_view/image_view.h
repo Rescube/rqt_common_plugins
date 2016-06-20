@@ -91,19 +91,12 @@ protected slots:
 
   virtual void onTopicChanged(int index);
   virtual void onOverlayChanged(int index);
-
   virtual void onZoom1(bool checked);
-
   virtual void onDynamicRange(bool checked);
-
   virtual void saveImage();
-  
   virtual void set_controls_visiblity(bool show);
-  
   virtual void onMousePublish(bool checked);
-
   virtual void onMouseLeft(int x, int y);
-
   virtual void onPubTopicChanged();
 
 protected:
@@ -122,6 +115,9 @@ protected:
   cv::Mat conversion_mat_overlay;
 
   QImage overlay_image;
+
+private slots:
+  void onComboBoxOrientation_currentIndexChanged(int index);
 
 private:
   ros::Publisher pub_mouse_left_;

@@ -70,11 +70,21 @@ public:
 
   void resizeToFitAspectRatio();
 
-  void setInnerFrameMinimumSize(const QSize& size);
 
+  void setInnerFrameMinimumSize(const QSize& size);
   void setInnerFrameMaximumSize(const QSize& size);
 
+  void setInnerFrameFixedSizeToImage();
   void setInnerFrameFixedSize(const QSize& size);
+
+  enum Orientation {
+      Normal = 0,
+      Rotated_90 = 1,
+      Mirrored = 2,
+      Rotated_270 = 3
+  };
+  void setOrientation(Orientation orientation);
+
 
 signals:
 
@@ -98,7 +108,7 @@ private:
 
   QImage qimage_;
   mutable QMutex qimage_mutex_;
-
+  Orientation m_orientation;
 };
 
 }
