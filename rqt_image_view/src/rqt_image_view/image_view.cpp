@@ -142,6 +142,7 @@ void ImageView::saveSettings(qt_gui_cpp::Settings& plugin_settings, qt_gui_cpp::
     instance_settings.setValue("publish_click_location", ui_.publish_click_location_check_box->isChecked());
     instance_settings.setValue("mouse_pub_topic", ui_.publish_click_location_topic_line_edit->text());
     instance_settings.setValue("orientation", ui_.comboBoxOrientation->currentIndex());
+    instance_settings.setValue("lineEditName", ui_.lineEditName->text());
 }
 
 void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, const qt_gui_cpp::Settings& instance_settings)
@@ -199,6 +200,8 @@ void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, con
     ui_.publish_click_location_topic_line_edit->setText(pub_topic);
 
     ui_.comboBoxOrientation->setCurrentIndex(instance_settings.value("orientation").toInt());
+
+    ui_.lineEditName->setText(instance_settings.value("lineEditName").toString());
 }
 
 void ImageView::updateTopicList()
@@ -273,6 +276,8 @@ QSet<QString> ImageView::getTopics(const QSet<QString>& message_types, const QSe
             QString topic = it->name.c_str();
 
             // add raw topic
+            if (!topic.endsWith("compressed"))
+                continue;
             topics.insert(topic);
             //qDebug("ImageView::getTopics() raw topic '%s'", topic.toStdString().c_str());
 
@@ -282,6 +287,8 @@ QSet<QString> ImageView::getTopics(const QSet<QString>& message_types, const QSe
                 if (all_topics.contains(topic + "/" + *jt))
                 {
                     QString sub = topic + " " + *jt;
+                    if (!topic.endsWith("compressed"))
+                        continue;
                     topics.insert(sub);
                     //qDebug("ImageView::getTopics() transport specific sub-topic '%s'", sub.toStdString().c_str());
                 }
@@ -293,6 +300,8 @@ QSet<QString> ImageView::getTopics(const QSet<QString>& message_types, const QSe
             int index = topic.lastIndexOf("/");
             if (index != -1)
             {
+                if (!topic.endsWith("compressed"))
+                    continue;
                 topic.replace(index, 1, " ");
                 topics.insert(topic);
                 //qDebug("ImageView::getTopics() transport specific sub-topic '%s'", topic.toStdString().c_str());
@@ -512,45 +521,49 @@ void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
     // image must be copied since it uses the conversion_mat_ for storage which is asynchronously overwritten in the next callback invocation
     QImage image(conversion_mat_.data, conversion_mat_.cols, conversion_mat_.rows, conversion_mat_.step[0], QImage::Format_RGB888);
 
-    if (!ui_.overlay_combo_box->currentText().isEmpty() && !overlay_image.isNull()) {
-        // if overlay is selected paint the image onto the overlayimage
-        // technically we are painting it over
-        QPainter overlay_painter(&image);
-        overlay_painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        overlay_painter.drawImage(0, 0, overlay_image);
+    // if overlay is selected paint the image onto the overlayimage
+    // technically we are painting it over
+    QPainter overlay_painter(&image);
+    overlay_painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    overlay_painter.drawImage(0, 0, overlay_image);
 
-        if (ui_.display_latency_check_box->isChecked()) {
-            QPen pen;
-            int latency_in_ms = (ros::Time::now() - msg->header.stamp).toNSec() / 1000000;
-            // latency bar color scheme:
-            //  0%-33%  of full scale: green
-            // 33%-66%  of full scale: yellow
-            // 66%-100% of full scale: darkyellow
-            // >100%    of full scale: red
-            if (latency_in_ms > ui_.full_scale_latency_spin_box->value()) {
-                pen.setColor(Qt::red);
-            } else if (latency_in_ms <= ui_.full_scale_latency_spin_box->value() &&
-                       latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)*2) {
-                pen.setColor(QColor::fromRgb(0xFF, 0xA5, 0x00));
-            } else if (latency_in_ms <= (ui_.full_scale_latency_spin_box->value()/3)*2 &&
-                       latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)) {
-                pen.setColor(Qt::yellow);
-            } else {
-                pen.setColor(Qt::green);
-            }
+    QPen pen;
 
-            pen.setWidth(4);
-            overlay_painter.setPen(pen);
-            double latency_bar_width = (image.width() / ui_.full_scale_latency_spin_box->value()) * latency_in_ms;
-            if (latency_bar_width > image.width())
-                latency_bar_width = image.width();
-            overlay_painter.drawLine(0, 0, latency_bar_width, 0);
+    if (ui_.display_latency_check_box->isChecked()) {
+        int latency_in_ms = (ros::Time::now() - msg->header.stamp).toNSec() / 1000000;
+        // latency bar color scheme:
+        //  0%-33%  of full scale: green
+        // 33%-66%  of full scale: yellow
+        // 66%-100% of full scale: darkyellow
+        // >100%    of full scale: red
+        if (latency_in_ms > ui_.full_scale_latency_spin_box->value()) {
+            pen.setColor(Qt::red);
+        } else if (latency_in_ms <= ui_.full_scale_latency_spin_box->value() &&
+                   latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)*2) {
+            pen.setColor(QColor::fromRgb(0xFF, 0xA5, 0x00));
+        } else if (latency_in_ms <= (ui_.full_scale_latency_spin_box->value()/3)*2 &&
+                   latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)) {
+            pen.setColor(Qt::yellow);
+        } else {
+            pen.setColor(Qt::green);
         }
-        ui_.image_frame->setImage(image);
-    } else {
-        // if no overlay selected draw the image
-        ui_.image_frame->setImage(image);
+
+        pen.setWidth(4);
+        overlay_painter.setPen(pen);
+        double latency_bar_width = (image.width() / ui_.full_scale_latency_spin_box->value()) * latency_in_ms;
+        if (latency_bar_width > image.width())
+            latency_bar_width = image.width();
+        overlay_painter.drawLine(0, 0, latency_bar_width, 0);
     }
+
+    if (!ui_.lineEditName->text().isEmpty()) {
+        pen.setColor(Qt::red);
+        pen.setBrush(Qt::red);
+        overlay_painter.setPen(pen);
+        overlay_painter.drawText(QRect(3,3, image.width(), image.height()), ui_.lineEditName->text());
+    }
+
+    ui_.image_frame->setImage(image);
 
     if (!ui_.zoom_1_push_button->isEnabled())
     {

@@ -241,6 +241,9 @@
          </widget>
         </item>
         <item>
+         <widget class="QLineEdit" name="lineEditName"/>
+        </item>
+        <item>
          <spacer name="horizontalSpacer_3">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -261,42 +264,37 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0">
-     <property name="spacing">
-      <number>0</number>
+    <widget class="rqt_image_view::RatioLayoutedFrame" name="image_frame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>1</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
      </property>
-     <item>
-      <widget class="rqt_image_view::RatioLayoutedFrame" name="image_frame">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>80</width>
-         <height>60</height>
-        </size>
-       </property>
-       <property name="contextMenuPolicy">
-        <enum>Qt::ActionsContextMenu</enum>
-       </property>
-       <property name="autoFillBackground">
-        <bool>false</bool>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(0, 0, 0);</string>
-       </property>
-       <property name="frameShape">
-        <enum>QFrame::Box</enum>
-       </property>
-       <property name="lineWidth">
-        <number>1</number>
-       </property>
-      </widget>
-     </item>
-    </layout>
+     <property name="minimumSize">
+      <size>
+       <width>80</width>
+       <height>60</height>
+      </size>
+     </property>
+     <property name="contextMenuPolicy">
+      <enum>Qt::ActionsContextMenu</enum>
+     </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: rgb(0, 0, 0);
+border-color: rgb(255, 0, 0);
+border-width: 5px solid;</string>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
+     </property>
+     <property name="lineWidth">
+      <number>1</number>
+     </property>
+    </widget>
    </item>
    <item>
     <spacer name="verticalSpacer">

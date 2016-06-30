@@ -29,17 +29,19 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import rospy
+import pprint
+
 from python_qt_binding.QtCore import Qt
 from python_qt_binding.QtGui import QStandardItem, QStandardItemModel
 from .data_items import ReadonlyItem
 
-
 class MessageTreeModel(QStandardItemModel):
-
+    
     def __init__(self, parent=None):
         # FIXME: why is this not working? should be the same as the following line...
         #super(MessageTreeModel, self).__init__(parent)
         QStandardItemModel.__init__(self, parent)
+        self.indent = 0
         
     def flags(self, index):
         # FIXME hardcoded column number
@@ -72,6 +74,7 @@ class MessageTreeModel(QStandardItemModel):
         return QStandardItemModel.setData(self, index, value, role)
     
     def add_message(self, message_instance, message_name='', message_type='', message_path=''):
+        rospy.logerr(message_name)
         if message_instance is None:
             return
         self._recursive_create_items(self, message_instance, message_name, message_type, message_path)
@@ -91,6 +94,11 @@ class MessageTreeModel(QStandardItemModel):
 
     def _recursive_create_items(self, parent, slot, slot_name, slot_type_name, slot_path, **kwargs):
         row = []
+        saveIndent = self.indent
+        pp = pprint.PrettyPrinter(indent=4)
+        pp.pprint("%d slot mtm %s %s %s %s" % (self.indent, slot_name , slot_type_name , slot_path, type(slot)))
+        self.indent = self.indent + 1
+        #pp.pprint(slot)
         for item in self._get_data_items_for_path(slot_name, slot_type_name, slot_path, **kwargs):
             item._path = slot_path
             item._user_data = kwargs.get('user_data', None)
@@ -101,15 +109,17 @@ class MessageTreeModel(QStandardItemModel):
             for child_slot_name, child_slot_type in zip(slot.__slots__, slot._slot_types):
                 child_slot_path = slot_path + '/' + child_slot_name
                 child_slot = getattr(slot, child_slot_name)
+                rospy.logerr("rec_slots")
                 self._recursive_create_items(row[0], child_slot, child_slot_name, child_slot_type, child_slot_path, **kwargs)
-
-        elif type(slot) in (list, tuple) and (len(slot) > 0):
+            self.indent = saveIndent
+        elif (type(slot) in (list, tuple) and (len(slot) > 0)):
             child_slot_type = slot_type_name[:slot_type_name.find('[')]
             for index, child_slot in enumerate(slot):
                 child_slot_name = '[%d]' % index
                 child_slot_path = slot_path + child_slot_name
+                rospy.logerr("rec_list")
                 self._recursive_create_items(row[0], child_slot, child_slot_name, child_slot_type, child_slot_path, **kwargs)
-
+            self.indent = saveIndent
         else:
             is_leaf_node = True
 

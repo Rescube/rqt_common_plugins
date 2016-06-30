@@ -91,7 +91,6 @@ void RatioLayoutedFrame::setImage(const QImage& image)//, QMutex* image_mutex)
 void RatioLayoutedFrame::resizeToFitAspectRatio()
 {
     QRect rect = contentsRect();
-
     // reduce longer edge to aspect ratio
     double width = double(rect.width());
     double height = double(rect.height());

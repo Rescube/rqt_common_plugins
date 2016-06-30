@@ -30,6 +30,8 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 import threading
+import rospy
+import pprint
 
 from python_qt_binding.QtCore import Qt, Signal
 from python_qt_binding.QtGui import QStandardItem
@@ -90,12 +92,16 @@ class PublisherTreeModel(MessageTreeModel):
         return None
 
     def update_publisher(self, publisher_info):
+        pp = pprint.PrettyPrinter(indent=4)
+        pp.pprint("update_publisher")
         top_level_row_number = self.remove_publisher(publisher_info['publisher_id'])
         self.add_publisher(publisher_info, top_level_row_number)
 
     def add_publisher(self, publisher_info, top_level_row_number=None):
         # recursively create widget items for the message's slots
         parent = self
+        pp = pprint.PrettyPrinter(indent=4)
+        pp.pprint("add_publisher")
         slot = publisher_info['message_instance']
         slot_name = publisher_info['topic_name']
         slot_type_name = publisher_info['message_instance']._type
@@ -121,6 +127,9 @@ class PublisherTreeModel(MessageTreeModel):
         return (ReadonlyItem(slot_name), QStandardItem(slot_type_name), ReadonlyItem(''), expression_item)
 
     def _recursive_create_items(self, parent, slot, slot_name, slot_type_name, slot_path, expressions={}, **kwargs):
+        pp = pprint.PrettyPrinter(indent=4)
+        #pp.pprint("slot ptm")
+        #pp.pprint(slot)
         row, is_leaf_node = super(PublisherTreeModel, self)._recursive_create_items(parent, slot, slot_name, slot_type_name, slot_path, expressions=expressions, **kwargs)
         if is_leaf_node:
             expression_text = expressions.get(slot_path, repr(slot))
