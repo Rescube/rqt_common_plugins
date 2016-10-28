@@ -45,17 +45,38 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="toolTip">
+           <string>Image topic</string>
+          </property>
           <property name="sizeAdjustPolicy">
            <enum>QComboBox::AdjustToContents</enum>
           </property>
          </widget>
         </item>
         <item>
+         <widget class="QToolButton" name="toolButtonFilterCompressed">
+          <property name="toolTip">
+           <string>Show compressed topics only</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset theme="filter"/>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QToolButton" name="refresh_topics_push_button">
+          <property name="toolTip">
+           <string>Refresh topics list</string>
+          </property>
           <property name="icon">
            <iconset theme="view-refresh">
-            <normaloff/>
-           </iconset>
+            <normaloff>.</normaloff>.</iconset>
           </property>
          </widget>
         </item>
@@ -66,8 +87,7 @@
           </property>
           <property name="icon">
            <iconset theme="zoom-original">
-            <normaloff/>
-           </iconset>
+            <normaloff>.</normaloff>.</iconset>
           </property>
           <property name="checkable">
            <bool>true</bool>
@@ -110,8 +130,7 @@
           </property>
           <property name="icon">
            <iconset theme="image-x-generic">
-            <normaloff/>
-           </iconset>
+            <normaloff>.</normaloff>.</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -128,6 +147,9 @@
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="toolTip">
+           <string>Overlay topic</string>
           </property>
          </widget>
         </item>
@@ -242,6 +264,42 @@
         </item>
         <item>
          <widget class="QLineEdit" name="lineEditName"/>
+        </item>
+        <item>
+         <widget class="QDoubleSpinBox" name="doubleSpinBoxRotation">
+          <property name="minimum">
+           <double>-180.000000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>180.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QDoubleSpinBox" name="doubleSpinBoxDx">
+          <property name="minimum">
+           <double>-999.000000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>999.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>10.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QDoubleSpinBox" name="doubleSpinBoxDy">
+          <property name="minimum">
+           <double>-999.000000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>999.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>10.000000000000000</double>
+          </property>
+         </widget>
         </item>
         <item>
          <spacer name="horizontalSpacer_3">

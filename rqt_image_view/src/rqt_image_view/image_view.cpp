@@ -35,6 +35,7 @@
 
 #include <pluginlib/class_list_macros.h>
 #include <ros/master.h>
+#include <rescube_msgs/image_view_rotation.h>
 #include <sensor_msgs/image_encodings.h>
 
 #include <cv_bridge/cv_bridge.h>
@@ -70,13 +71,17 @@ void ImageView::initPlugin(qt_gui_cpp::PluginContext& context)
     connect(ui_.topics_combo_box, SIGNAL(currentIndexChanged(int)), this, SLOT(onTopicChanged(int)));
     connect(ui_.overlay_combo_box, SIGNAL(currentIndexChanged(int)), this, SLOT(onOverlayChanged(int)));
 
-    connect(ui_.refresh_topics_push_button, SIGNAL(pressed()), this, SLOT(updateTopicList()));
+    connect(ui_.refresh_topics_push_button, SIGNAL(toggled(bool)), this, SLOT(updateTopicList()));
 
     connect(ui_.zoom_1_push_button, SIGNAL(toggled(bool)), this, SLOT(onZoom1(bool)));
 
     connect(ui_.dynamic_range_check_box, SIGNAL(toggled(bool)), this, SLOT(onDynamicRange(bool)));
     connect(ui_.save_as_image_push_button, SIGNAL(pressed()), this, SLOT(saveImage()));
     connect(ui_.comboBoxOrientation, SIGNAL(currentIndexChanged(int)), this, SLOT(onComboBoxOrientation_currentIndexChanged(int)));
+    connect(ui_.doubleSpinBoxRotation, SIGNAL(valueChanged(double)), this, SLOT(on_doubleSpinBoxRotation_valueChanged(double)));
+    connect(ui_.doubleSpinBoxDx, SIGNAL(valueChanged(double)), this, SLOT(on_doubleSpinBoxDx_valueChanged(double)));
+    connect(ui_.doubleSpinBoxDy, SIGNAL(valueChanged(double)), this, SLOT(on_doubleSpinBoxDy_valueChanged(double)));
+    connect(ui_.toolButtonFilterCompressed, SIGNAL(toggled(bool)), this, SLOT(updateTopicList()));
 
     // set topic name if passed in as argument
     const QStringList& argv = context.argv();
@@ -124,6 +129,7 @@ void ImageView::shutdownPlugin()
 {
     subscriber_.shutdown();
     pub_mouse_left_.shutdown();
+    rotation_subscriber_.shutdown();
 }
 
 void ImageView::saveSettings(qt_gui_cpp::Settings& plugin_settings, qt_gui_cpp::Settings& instance_settings) const
@@ -143,6 +149,7 @@ void ImageView::saveSettings(qt_gui_cpp::Settings& plugin_settings, qt_gui_cpp::
     instance_settings.setValue("mouse_pub_topic", ui_.publish_click_location_topic_line_edit->text());
     instance_settings.setValue("orientation", ui_.comboBoxOrientation->currentIndex());
     instance_settings.setValue("lineEditName", ui_.lineEditName->text());
+    instance_settings.setValue("showCompressedOnly", ui_.toolButtonFilterCompressed->isChecked());
 }
 
 void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, const qt_gui_cpp::Settings& instance_settings)
@@ -202,6 +209,7 @@ void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, con
     ui_.comboBoxOrientation->setCurrentIndex(instance_settings.value("orientation").toInt());
 
     ui_.lineEditName->setText(instance_settings.value("lineEditName").toString());
+    ui_.toolButtonFilterCompressed->setChecked(instance_settings.value("showCompressedOnly").toBool());
 }
 
 void ImageView::updateTopicList()
@@ -275,9 +283,10 @@ QSet<QString> ImageView::getTopics(const QSet<QString>& message_types, const QSe
         {
             QString topic = it->name.c_str();
 
-            // add raw topic
-            if (!topic.endsWith("compressed"))
+            // if compressed filtering is set and the topic is uncompressed skip it!
+            if (ui_.toolButtonFilterCompressed->isChecked() && !topic.endsWith("compressed"))
                 continue;
+
             topics.insert(topic);
             //qDebug("ImageView::getTopics() raw topic '%s'", topic.toStdString().c_str());
 
@@ -334,6 +343,7 @@ void ImageView::selectOverlayTopic(const QString& topic)
 void ImageView::onTopicChanged(int index)
 {
     subscriber_.shutdown();
+    rotation_subscriber_.shutdown();
 
     // reset image on topic change
     ui_.image_frame->setImage(QImage());
@@ -348,7 +358,9 @@ void ImageView::onTopicChanged(int index)
         image_transport::TransportHints hints(transport.toStdString());
         try {
             subscriber_ = it.subscribe(topic.toStdString(), 1, &ImageView::callbackImage, this, hints);
+            rotation_subscriber_ = nodeHandle.subscribe(topic.toStdString() + "_rotation", 1, &ImageView::callbackRotationChanged, this);
             //qDebug("ImageView::onTopicChanged() to topic '%s' with transport '%s'", topic.toStdString().c_str(), subscriber_.getTransport().c_str());
+            qWarning() << QString::fromStdString(topic.toStdString() + "_rotation");
         } catch (image_transport::TransportLoadException& e) {
             QMessageBox::warning(widget_, tr("Loading image transport plugin failed"), e.what());
         }
@@ -594,6 +606,16 @@ void ImageView::callbackOverlay(const sensor_msgs::Image::ConstPtr& msg)
             QImage::Format_ARGB32).copy();
 }
 
+void ImageView::callbackRotationChanged(const rescube_msgs::image_view_rotation::ConstPtr& msg)
+{
+    ui_.image_frame->setCustomRotation(msg->rotation);
+    ui_.image_frame->setDx(msg->dx);
+    ui_.image_frame->setDy(msg->dy);
+    qWarning() << msg->rotation;
+    qWarning() << msg->dx;
+    qWarning() << msg->dy;
+}
+
 
 void rqt_image_view::ImageView::set_controls_visiblity(bool hide)
 {
@@ -605,7 +627,24 @@ void rqt_image_view::ImageView::onComboBoxOrientation_currentIndexChanged(int in
     ui_.image_frame->setOrientation((rqt_image_view::RatioLayoutedFrame::Orientation)index);
 }
 
+void rqt_image_view::ImageView::on_doubleSpinBoxRotation_valueChanged(double arg1)
+{
+    ui_.image_frame->setCustomRotation(arg1);
+}
+
+
+void rqt_image_view::ImageView::on_doubleSpinBoxDy_valueChanged(double arg1)
+{
+    ui_.image_frame->setDx(arg1);
+}
+
+void rqt_image_view::ImageView::on_doubleSpinBoxDx_valueChanged(double arg1)
+{
+    ui_.image_frame->setDy(arg1);
+}
 
 } // end namespace rqt_image_view
 
 PLUGINLIB_EXPORT_CLASS(rqt_image_view::ImageView, rqt_gui_cpp::Plugin)
+
+

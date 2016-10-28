@@ -38,6 +38,7 @@
 #include <ui_image_view.h>
 
 #include <image_transport/image_transport.h>
+#include <rescube_msgs/image_view_rotation.h>
 #include <ros/macros.h>
 #include <sensor_msgs/Image.h>
 #include <geometry_msgs/Point.h>
@@ -103,6 +104,7 @@ protected:
 
   virtual void callbackImage(const sensor_msgs::Image::ConstPtr& msg);
   virtual void callbackOverlay(const sensor_msgs::Image::ConstPtr& msg);
+  void callbackRotationChanged(const rescube_msgs::image_view_rotation::ConstPtr& msg);
 
   Ui::ImageViewWidget ui_;
 
@@ -110,6 +112,7 @@ protected:
 
   image_transport::Subscriber subscriber_;
   image_transport::Subscriber overlay_subscriber_;
+  ros::Subscriber rotation_subscriber_;
 
   cv::Mat conversion_mat_;
   cv::Mat conversion_mat_overlay;
@@ -118,9 +121,13 @@ protected:
 
 private slots:
   void onComboBoxOrientation_currentIndexChanged(int index);
+  void on_doubleSpinBoxRotation_valueChanged(double arg1);
+  void on_doubleSpinBoxDy_valueChanged(double arg1);
+  void on_doubleSpinBoxDx_valueChanged(double arg1);
 
 private:
   ros::Publisher pub_mouse_left_;
+  ros::NodeHandle nodeHandle;
 
   bool pub_topic_custom_;
 

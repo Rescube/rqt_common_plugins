@@ -41,7 +41,9 @@ namespace rqt_image_view {
 RatioLayoutedFrame::RatioLayoutedFrame(QWidget* parent, Qt::WindowFlags flags)
     : QFrame(parent, flags),
       aspect_ratio_(4, 3),
-      m_orientation(Normal)
+      m_orientation(Normal),
+      customRotation(0),
+      dx(0), dy(0)
 {
     connect(this, SIGNAL(delayed_update()), this, SLOT(update()), Qt::QueuedConnection);
 }
@@ -172,6 +174,9 @@ void RatioLayoutedFrame::paintEvent(QPaintEvent* event)
     {
         QRectF paintRect = frameRect();
         resizeToFitAspectRatio();
+
+        painter.translate(paintRect.width() * dx, paintRect.height() * dy);
+
         // TODO: check if full draw is really necessary
         //QPaintEvent* paint_event = dynamic_cast<QPaintEvent*>(event);
         switch (m_orientation) {
@@ -193,6 +198,11 @@ void RatioLayoutedFrame::paintEvent(QPaintEvent* event)
         default:
             break;
         }
+
+        if (customRotation != 0) {
+            painter.rotate(customRotation);
+        }
+
         painter.drawImage(paintRect, qimage_);
     } else {
         // default image with gradient
@@ -222,4 +232,34 @@ void RatioLayoutedFrame::mousePressEvent(QMouseEvent * mouseEvent)
     }
     QFrame::mousePressEvent(mouseEvent);
 }
+double RatioLayoutedFrame::getDy() const
+{
+    return dy;
+}
+
+void RatioLayoutedFrame::setDy(double value)
+{
+    dy = value;
+}
+
+double RatioLayoutedFrame::getDx() const
+{
+    return dx;
+}
+
+void RatioLayoutedFrame::setDx(double value)
+{
+    dx = value;
+}
+
+double RatioLayoutedFrame::getCustomRotation() const
+{
+    return customRotation;
+}
+
+void RatioLayoutedFrame::setCustomRotation(double value)
+{
+    customRotation = value;
+}
+
 }

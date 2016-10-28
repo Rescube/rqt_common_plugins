@@ -86,6 +86,15 @@ public:
   void setOrientation(Orientation orientation);
 
 
+  double getCustomRotation() const;
+  void setCustomRotation(double value);
+
+  double getDx() const;
+  void setDx(double value);
+
+  double getDy() const;
+  void setDy(double value);
+
 signals:
 
   void delayed_update();
@@ -109,6 +118,9 @@ private:
   QImage qimage_;
   mutable QMutex qimage_mutex_;
   Orientation m_orientation;
+
+  double customRotation;
+  double dx, dy;
 };
 
 }
