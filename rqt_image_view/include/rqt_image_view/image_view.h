@@ -133,6 +133,9 @@ private:
 
   QString arg_topic_name, arg_overlay_name;
   QAction *tools_hide_action;
+
+  void autoSelectOverLay(const QString &topicName);
+  QList<QString> getSupportedTransports();
 };
 
 }

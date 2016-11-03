@@ -220,22 +220,7 @@ void ImageView::updateTopicList()
     message_sub_types.insert("sensor_msgs/CompressedImage");
 
     // get declared transports
-    QList<QString> transports;
-    image_transport::ImageTransport it(getNodeHandle());
-    std::vector<std::string> declared = it.getDeclaredTransports();
-    for (std::vector<std::string>::const_iterator it = declared.begin(); it != declared.end(); it++)
-    {
-        //qDebug("ImageView::updateTopicList() declared transport '%s'", it->c_str());
-        QString transport = it->c_str();
-
-        // strip prefix from transport name
-        QString prefix = "image_transport/";
-        if (transport.startsWith(prefix))
-        {
-            transport = transport.mid(prefix.length());
-        }
-        transports.append(transport);
-    }
+    QList<QString> transports = getSupportedTransports();
 
     QString selected = ui_.topics_combo_box->currentText();
     QString selectedOverlay = ui_.overlay_combo_box->currentText();
@@ -351,7 +336,7 @@ void ImageView::onTopicChanged(int index)
     QStringList parts = ui_.topics_combo_box->itemData(index).toString().split(" ");
     QString topic = parts.first();
     QString transport = parts.length() == 2 ? parts.last() : "raw";
-
+    bool success = true;
     if (!topic.isEmpty())
     {
         image_transport::ImageTransport it(getNodeHandle());
@@ -363,10 +348,15 @@ void ImageView::onTopicChanged(int index)
             qWarning() << QString::fromStdString(topic.toStdString() + "_rotation");
         } catch (image_transport::TransportLoadException& e) {
             QMessageBox::warning(widget_, tr("Loading image transport plugin failed"), e.what());
+            success = false;
         }
     }
 
     onMousePublish(ui_.publish_click_location_check_box->isChecked());
+
+    // try to find topic suffixed with _overlay and select that as overlay
+    if (success)
+        autoSelectOverLay(topic);
 }
 
 void ImageView::onOverlayChanged(int index)
@@ -641,6 +631,63 @@ void rqt_image_view::ImageView::on_doubleSpinBoxDy_valueChanged(double arg1)
 void rqt_image_view::ImageView::on_doubleSpinBoxDx_valueChanged(double arg1)
 {
     ui_.image_frame->setDy(arg1);
+}
+
+QList<QString> ImageView::getSupportedTransports()
+{
+    QList<QString> transports;
+    image_transport::ImageTransport it(getNodeHandle());
+    std::vector<std::string> declared = it.getDeclaredTransports();
+    for (std::vector<std::string>::const_iterator it = declared.begin(); it != declared.end(); it++)
+    {
+        //qDebug("ImageView::updateTopicList() declared transport '%s'", it->c_str());
+        QString transport = it->c_str();
+
+        // strip prefix from transport name
+        QString prefix = "image_transport/";
+        if (transport.startsWith(prefix))
+        {
+            transport = transport.mid(prefix.length());
+        }
+        transports.append(transport);
+    }
+
+    return transports;
+}
+
+/**
+ * @brief ImageView::autoSelectOverLay
+ * @param topicName the name of the selected image topic without the "compressed" suffix
+ * @details This method will automatically select the
+ * overlay topic if there is an existing topic with the
+ * name of the topicName argument suffixed with _overlay.
+ * It will also handle the overlay comboBox selection.
+ */
+void ImageView::autoSelectOverLay(const QString & topicName)
+{
+    QSet<QString> message_types;
+    message_types.insert("sensor_msgs/Image");
+    QSet<QString> message_sub_types;
+    message_sub_types.insert("sensor_msgs/CompressedImage");
+
+    QStringList parts = topicName.split("/", QString::SkipEmptyParts);
+    QString imageNode = parts.first();
+
+    // get declared transports
+    QList<QString> transports = getSupportedTransports();
+
+    // fill combo box
+    QList<QString> topics = getTopics(message_types, message_sub_types, transports).values();
+    for (QList<QString>::const_iterator it = topics.begin(); it != topics.end(); it++)
+    {
+        QString currentTopicName = QVariant(*it).toString();
+        parts = currentTopicName.split('/', QString::SkipEmptyParts);
+        QString currentNodeName = parts.first();
+        if (currentNodeName == imageNode + "_overlay") {
+            selectOverlayTopic(*it);
+            break;
+        }
+    }
 }
 
 } // end namespace rqt_image_view
