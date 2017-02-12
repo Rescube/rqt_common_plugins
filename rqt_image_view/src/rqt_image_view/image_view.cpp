@@ -112,8 +112,13 @@ void ImageView::initPlugin(qt_gui_cpp::PluginContext& context)
     tools_hide_action = new QAction(tr("Hide toolbar"), this);
     tools_hide_action->setCheckable(true);
     ui_.image_frame->addAction(tools_hide_action);
-
     connect(tools_hide_action, SIGNAL(toggled(bool)), this, SLOT(set_controls_visiblity(bool)));
+
+    paused = false;
+    play_pause_action = new QAction(tr("Pause stream"), this);
+    play_pause_action->setIcon(QIcon::fromTheme("media-playback-pause"));
+    ui_.image_frame->addAction(play_pause_action);
+    connect(play_pause_action, SIGNAL(triggered()), this, SLOT(play_pause_triggered()));
 
     pub_topic_custom_ = false;
 
@@ -607,9 +612,23 @@ void ImageView::callbackRotationChanged(const rescube_msgs::image_view_rotation:
 }
 
 
-void rqt_image_view::ImageView::set_controls_visiblity(bool hide)
+void ImageView::set_controls_visiblity(bool hide)
 {
     ui_.controlsWidget->setVisible(!hide);
+}
+
+void ImageView::play_pause_triggered()
+{
+    paused = !paused;
+    if (paused) {
+        play_pause_action->setText(tr("Continue stream"));
+        play_pause_action->setIcon(QIcon::fromTheme("media-playback-start"));
+        subscriber_.shutdown();
+    } else {
+        play_pause_action->setText(tr("Pause stream"));
+        play_pause_action->setIcon(QIcon::fromTheme("media-playback-pause"));
+        onTopicChanged(ui_.topics_combo_box->currentIndex());
+    }
 }
 
 void rqt_image_view::ImageView::onComboBoxOrientation_currentIndexChanged(int index)

@@ -96,6 +96,7 @@ protected slots:
   virtual void onDynamicRange(bool checked);
   virtual void saveImage();
   virtual void set_controls_visiblity(bool show);
+  virtual void play_pause_triggered();
   virtual void onMousePublish(bool checked);
   virtual void onMouseLeft(int x, int y);
   virtual void onPubTopicChanged();
@@ -130,9 +131,10 @@ private:
   ros::NodeHandle nodeHandle;
 
   bool pub_topic_custom_;
+  bool paused;
 
   QString arg_topic_name, arg_overlay_name;
-  QAction *tools_hide_action;
+  QAction *tools_hide_action, *play_pause_action;
 
   void autoSelectOverLay(const QString &topicName);
   QList<QString> getSupportedTransports();
