@@ -526,9 +526,10 @@ void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
     // if overlay is selected paint the image onto the overlayimage
     // technically we are painting it over
     QPainter overlay_painter(&image);
-    overlay_painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    overlay_painter.drawImage(0, 0, overlay_image);
-
+    if (!overlay_image.isNull()) {
+        overlay_painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        overlay_painter.drawImage(0, 0, overlay_image.scaled(image.width(), image.height(), Qt::IgnoreAspectRatio));
+    }
     QPen pen;
 
     if (ui_.display_latency_check_box->isChecked()) {
