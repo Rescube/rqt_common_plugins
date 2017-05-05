@@ -129,7 +129,7 @@ void ImageView::shutdownPlugin()
 {
     subscriber_.shutdown();
     pub_mouse_left_.shutdown();
-    rotation_subscriber_.shutdown();
+    //rotation_subscriber_.shutdown();
 }
 
 void ImageView::saveSettings(qt_gui_cpp::Settings& plugin_settings, qt_gui_cpp::Settings& instance_settings) const
@@ -328,7 +328,7 @@ void ImageView::selectOverlayTopic(const QString& topic)
 void ImageView::onTopicChanged(int index)
 {
     subscriber_.shutdown();
-    rotation_subscriber_.shutdown();
+    //rotation_subscriber_.shutdown();
 
     // reset image on topic change
     ui_.image_frame->setImage(QImage());
@@ -343,7 +343,7 @@ void ImageView::onTopicChanged(int index)
         image_transport::TransportHints hints(transport.toStdString());
         try {
             subscriber_ = it.subscribe(topic.toStdString(), 1, &ImageView::callbackImage, this, hints);
-            rotation_subscriber_ = nodeHandle.subscribe(topic.toStdString() + "_rotation", 1, &ImageView::callbackRotationChanged, this);
+            //rotation_subscriber_ = nodeHandle.subscribe(topic.toStdString() + "_rotation", 1, &ImageView::callbackRotationChanged, this);
             //qDebug("ImageView::onTopicChanged() to topic '%s' with transport '%s'", topic.toStdString().c_str(), subscriber_.getTransport().c_str());
             qWarning() << QString::fromStdString(topic.toStdString() + "_rotation");
         } catch (image_transport::TransportLoadException& e) {
