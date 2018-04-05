@@ -470,6 +470,32 @@ void ImageView::onPubTopicChanged()
 void ImageView::updateImage(QImage &image) {
     // if overlay is selected paint the image onto the overlayimage
     // technically we are painting it over
+    int latency_in_ms = (ros::Time::now() - main_image_header_stamp).toNSec() / 1000000;
+
+    if (ui_.display_latency_check_box->isChecked() && ui_.full_scale_latency_spin_box->value()>0) {
+        if (latency_in_ms > ui_.full_scale_latency_spin_box->value()) {
+            QImage *pimage=&image;
+            QPoint p1, p2, p3, p4;
+            p2.setY(pimage->height()/4);
+            p3.setY(pimage->height()-pimage->height()/4);
+            p4.setY(pimage->height());
+
+            QLinearGradient gradient(p1,p2);
+            gradient.setColorAt(0, QColor(0, 0, 0, 255));
+            gradient.setColorAt(1, Qt::transparent);
+            QPainter p(pimage);
+            p.fillRect(0, 0, pimage->width(), pimage->height()/4, gradient);
+
+            QLinearGradient gradient2(p3, p4);
+            gradient2.setColorAt(0, Qt::transparent);
+            gradient2.setColorAt(1, QColor(0, 0, 0, 255));
+            p.fillRect(0, pimage->height()-pimage->height()/4, pimage->width(), pimage->height(), gradient2);
+
+            p.end();
+
+        }
+    }
+
     QPainter overlay_painter(&image);
     if (!overlay_image.isNull()) {
         overlay_painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
@@ -483,7 +509,6 @@ void ImageView::updateImage(QImage &image) {
         // 33%-66%  of full scale: yellow
         // 66%-100% of full scale: darkyellow
         // >100%    of full scale: red
-        int latency_in_ms = (ros::Time::now() - main_image_header_stamp).toNSec() / 1000000;
         if (latency_in_ms>0) {
             if (latency_in_ms > ui_.full_scale_latency_spin_box->value()) {
                 pen.setColor(Qt::red);
@@ -602,16 +627,17 @@ void ImageView::callbackOverlay(const sensor_msgs::Image::ConstPtr& msg)
                            conversion_mat_overlay.step[0],
             QImage::Format_ARGB32).copy();
 
-    QImage image=main_image.copy();
-    updateImage(image);
-    ui_.image_frame->setImage(image);
+    if (!main_image.isNull()) {
+        QImage image=main_image.copy();
+        updateImage(image);
+        ui_.image_frame->setImage(image);
 
-    if (!ui_.zoom_1_push_button->isEnabled())
-    {
-        ui_.zoom_1_push_button->setEnabled(true);
-        onZoom1(ui_.zoom_1_push_button->isChecked());
+        if (!ui_.zoom_1_push_button->isEnabled())
+        {
+            ui_.zoom_1_push_button->setEnabled(true);
+            onZoom1(ui_.zoom_1_push_button->isChecked());
+        }
     }
-
 }
 
 void ImageView::callbackRotationChanged(const rescube_msgs::image_view_rotation::ConstPtr& msg)
