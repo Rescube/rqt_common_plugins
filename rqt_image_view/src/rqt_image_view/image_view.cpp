@@ -37,6 +37,7 @@
 #include <ros/master.h>
 #include <rescube_msgs/image_view_rotation.h>
 #include <sensor_msgs/image_encodings.h>
+#include <stdexcept>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -81,7 +82,7 @@ void ImageView::initPlugin(qt_gui_cpp::PluginContext& context)
     connect(ui_.doubleSpinBoxRotation, SIGNAL(valueChanged(double)), this, SLOT(on_doubleSpinBoxRotation_valueChanged(double)));
     connect(ui_.doubleSpinBoxDx, SIGNAL(valueChanged(double)), this, SLOT(on_doubleSpinBoxDx_valueChanged(double)));
     connect(ui_.doubleSpinBoxDy, SIGNAL(valueChanged(double)), this, SLOT(on_doubleSpinBoxDy_valueChanged(double)));
-    connect(ui_.toolButtonFilterCompressed, SIGNAL(toggled(bool)), this, SLOT(updateTopicList()));
+    connect(ui_.toolButtonFilterCompressed, SIGNAL(toggled(bool)), this, SLOT(toggleCompressedTopicFilter(bool)));
 
     // set topic name if passed in as argument
     const QStringList& argv = context.argv();
@@ -212,6 +213,14 @@ void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, con
     ui_.toolButtonFilterCompressed->setChecked(instance_settings.value("showCompressedOnly").toBool());
 }
 
+void ImageView::toggleCompressedTopicFilter(bool compressedonly) {
+    try {
+        // updateTopicList();
+    } catch (std::runtime_error& e) {
+        QMessageBox::warning(widget_, tr("Runtime error"), e.what());
+    }
+}
+
 void ImageView::updateTopicList()
 {
     QSet<QString> message_types;
@@ -270,7 +279,7 @@ QSet<QString> ImageView::getTopics(const QSet<QString>& message_types, const QSe
 
             // if compressed filtering is set and the topic is uncompressed skip it!
             if (ui_.toolButtonFilterCompressed->isChecked() && !topic.endsWith("compressed"))
-                continue;
+               continue;
 
             topics.insert(topic);
             //qDebug("ImageView::getTopics() raw topic '%s'", topic.toStdString().c_str());

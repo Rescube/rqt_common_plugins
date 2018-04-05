@@ -79,6 +79,7 @@ public:
 protected slots:
 
   virtual void updateTopicList();
+  virtual void toggleCompressedTopicFilter(bool compressedonly);
 
 protected:
 
