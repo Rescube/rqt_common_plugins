@@ -216,7 +216,13 @@ void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, con
 void ImageView::toggleCompressedTopicFilter(bool compressedonly) {
     try {
         // updateTopicList();
-    } catch (std::runtime_error& e) {
+ /* http://wiki.ros.org/rqt/Tutorials/Writing%20a%20C%2B%2B%20Plugin#Special_note_for_using_roscpp_with_rqt
+  *  Due to restrictions in Qt, you cannot manipulate Qt widgets directly within ROS callbacks, because they are running in a different thread. In the ROS callback you can:
+     emit a Qt signal (which will bridge across the threads) and manipulate the widgets in the receiving slot
+    OR
+     only operate on non-widget entities like QAbstractItemModels
+ */
+   } catch (std::runtime_error& e) {
         QMessageBox::warning(widget_, tr("Runtime error"), e.what());
     }
 }
@@ -506,7 +512,7 @@ void ImageView::updateImage(QImage &image) {
     }
 
     QPainter overlay_painter(&image);
-    if (!overlay_image.isNull()) {
+    if (!overlay_image.isNull() && (((ros::Time::now() - overlay_image_header_stamp).toNSec() / 1000000)<3000)) {
         overlay_painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
         overlay_painter.drawImage(0, 0, overlay_image.scaled(image.width(), image.height(), Qt::IgnoreAspectRatio));
     }
@@ -635,7 +641,7 @@ void ImageView::callbackOverlay(const sensor_msgs::Image::ConstPtr& msg)
                            conversion_mat_overlay.rows,
                            conversion_mat_overlay.step[0],
             QImage::Format_ARGB32).copy();
-
+    overlay_image_header_stamp=ros::Time::now();
     if (!main_image.isNull()) {
         QImage image=main_image.copy();
         updateImage(image);
@@ -730,13 +736,17 @@ void ImageView::autoSelectOverLay(const QString & topicName)
     QList<QString> transports = getSupportedTransports();
 
     // fill combo box
+
     QList<QString> topics = getTopics(message_types, message_sub_types, transports).values();
     for (QList<QString>::const_iterator it = topics.begin(); it != topics.end(); it++)
     {
         QString currentTopicName = QVariant(*it).toString();
         parts = currentTopicName.split('/', QString::SkipEmptyParts);
         QString currentNodeName = parts.first();
+        //qWarning() << currentNodeName + " != " + imageNode + "_overlay";
         if (currentNodeName == imageNode + "_overlay") {
+            //qWarning() << currentNodeName + " == " + imageNode + "_overlay";
+            //QMessageBox::warning(widget_, imageNode+"_overlay", currentNodeName);
             selectOverlayTopic(*it);
             break;
         }

@@ -123,7 +123,7 @@ protected:
   QImage main_image;
   QImage overlay_image;
   ros::Time main_image_header_stamp;
-
+  ros::Time overlay_image_header_stamp;
 private slots:
   void onComboBoxOrientation_currentIndexChanged(int index);
   void on_doubleSpinBoxRotation_valueChanged(double arg1);
