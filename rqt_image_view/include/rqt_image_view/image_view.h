@@ -40,6 +40,8 @@
 #include <image_transport/image_transport.h>
 #include <rescube_msgs/image_view_rotation.h>
 #include <ros/macros.h>
+#include <ros/types.h>
+
 #include <sensor_msgs/Image.h>
 #include <geometry_msgs/Point.h>
 
@@ -105,6 +107,7 @@ protected:
   virtual void callbackImage(const sensor_msgs::Image::ConstPtr& msg);
   virtual void callbackOverlay(const sensor_msgs::Image::ConstPtr& msg);
   void callbackRotationChanged(const rescube_msgs::image_view_rotation::ConstPtr& msg);
+  void updateImage(QImage &image);
 
   Ui::ImageViewWidget ui_;
 
@@ -113,11 +116,12 @@ protected:
   image_transport::Subscriber subscriber_;
   image_transport::Subscriber overlay_subscriber_;
   ros::Subscriber rotation_subscriber_;
-
   cv::Mat conversion_mat_;
   cv::Mat conversion_mat_overlay;
 
+  QImage main_image;
   QImage overlay_image;
+  ros::Time main_image_header_stamp;
 
 private slots:
   void onComboBoxOrientation_currentIndexChanged(int index);

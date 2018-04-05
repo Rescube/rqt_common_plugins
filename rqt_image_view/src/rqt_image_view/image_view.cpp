@@ -467,6 +467,53 @@ void ImageView::onPubTopicChanged()
     onMousePublish(ui_.publish_click_location_check_box->isChecked());
 }
 
+void ImageView::updateImage(QImage &image) {
+    // if overlay is selected paint the image onto the overlayimage
+    // technically we are painting it over
+    QPainter overlay_painter(&image);
+    if (!overlay_image.isNull()) {
+        overlay_painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        overlay_painter.drawImage(0, 0, overlay_image.scaled(image.width(), image.height(), Qt::IgnoreAspectRatio));
+    }
+    QPen pen;
+
+    if (ui_.display_latency_check_box->isChecked() && ui_.full_scale_latency_spin_box->value()>0) {
+        // latency bar color scheme:
+        //  0%-33%  of full scale: green
+        // 33%-66%  of full scale: yellow
+        // 66%-100% of full scale: darkyellow
+        // >100%    of full scale: red
+        int latency_in_ms = (ros::Time::now() - main_image_header_stamp).toNSec() / 1000000;
+        if (latency_in_ms>0) {
+            if (latency_in_ms > ui_.full_scale_latency_spin_box->value()) {
+                pen.setColor(Qt::red);
+            } else if (latency_in_ms <= ui_.full_scale_latency_spin_box->value() &&
+                       latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)*2) {
+                pen.setColor(QColor::fromRgb(0xFF, 0xA5, 0x00));
+            } else if (latency_in_ms <= (ui_.full_scale_latency_spin_box->value()/3)*2 &&
+                       latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)) {
+                pen.setColor(Qt::yellow);
+            } else {
+                pen.setColor(Qt::green);
+            }
+
+            pen.setWidth(4);
+            overlay_painter.setPen(pen);
+            double latency_bar_width = (image.width() / ui_.full_scale_latency_spin_box->value()) * latency_in_ms;
+            if (latency_bar_width > image.width())
+                latency_bar_width = image.width();
+            overlay_painter.drawLine(0, 0, latency_bar_width, 0);
+        }
+    }
+
+    if (!ui_.lineEditName->text().isEmpty()) {
+        pen.setColor(Qt::red);
+        pen.setBrush(Qt::red);
+        overlay_painter.setPen(pen);
+        overlay_painter.drawText(QRect(3,3, image.width(), image.height()), ui_.lineEditName->text());
+    }
+}
+
 void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
 {
     try
@@ -522,50 +569,9 @@ void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
 
     // image must be copied since it uses the conversion_mat_ for storage which is asynchronously overwritten in the next callback invocation
     QImage image(conversion_mat_.data, conversion_mat_.cols, conversion_mat_.rows, conversion_mat_.step[0], QImage::Format_RGB888);
-
-    // if overlay is selected paint the image onto the overlayimage
-    // technically we are painting it over
-    QPainter overlay_painter(&image);
-    if (!overlay_image.isNull()) {
-        overlay_painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        overlay_painter.drawImage(0, 0, overlay_image.scaled(image.width(), image.height(), Qt::IgnoreAspectRatio));
-    }
-    QPen pen;
-
-    if (ui_.display_latency_check_box->isChecked()) {
-        int latency_in_ms = (ros::Time::now() - msg->header.stamp).toNSec() / 1000000;
-        // latency bar color scheme:
-        //  0%-33%  of full scale: green
-        // 33%-66%  of full scale: yellow
-        // 66%-100% of full scale: darkyellow
-        // >100%    of full scale: red
-        if (latency_in_ms > ui_.full_scale_latency_spin_box->value()) {
-            pen.setColor(Qt::red);
-        } else if (latency_in_ms <= ui_.full_scale_latency_spin_box->value() &&
-                   latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)*2) {
-            pen.setColor(QColor::fromRgb(0xFF, 0xA5, 0x00));
-        } else if (latency_in_ms <= (ui_.full_scale_latency_spin_box->value()/3)*2 &&
-                   latency_in_ms > (ui_.full_scale_latency_spin_box->value()/3)) {
-            pen.setColor(Qt::yellow);
-        } else {
-            pen.setColor(Qt::green);
-        }
-
-        pen.setWidth(4);
-        overlay_painter.setPen(pen);
-        double latency_bar_width = (image.width() / ui_.full_scale_latency_spin_box->value()) * latency_in_ms;
-        if (latency_bar_width > image.width())
-            latency_bar_width = image.width();
-        overlay_painter.drawLine(0, 0, latency_bar_width, 0);
-    }
-
-    if (!ui_.lineEditName->text().isEmpty()) {
-        pen.setColor(Qt::red);
-        pen.setBrush(Qt::red);
-        overlay_painter.setPen(pen);
-        overlay_painter.drawText(QRect(3,3, image.width(), image.height()), ui_.lineEditName->text());
-    }
-
+    main_image=image.copy();
+    main_image_header_stamp=msg->header.stamp;
+    updateImage(image);
     ui_.image_frame->setImage(image);
 
     if (!ui_.zoom_1_push_button->isEnabled())
@@ -595,6 +601,17 @@ void ImageView::callbackOverlay(const sensor_msgs::Image::ConstPtr& msg)
                            conversion_mat_overlay.rows,
                            conversion_mat_overlay.step[0],
             QImage::Format_ARGB32).copy();
+
+    QImage image=main_image.copy();
+    updateImage(image);
+    ui_.image_frame->setImage(image);
+
+    if (!ui_.zoom_1_push_button->isEnabled())
+    {
+        ui_.zoom_1_push_button->setEnabled(true);
+        onZoom1(ui_.zoom_1_push_button->isChecked());
+    }
+
 }
 
 void ImageView::callbackRotationChanged(const rescube_msgs::image_view_rotation::ConstPtr& msg)
