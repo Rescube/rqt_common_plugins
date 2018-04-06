@@ -29,7 +29,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
+#include "boost/date_time/posix_time/posix_time.hpp"
 #include <rqt_image_view/image_view.h>
 #include <rqt_image_view/ratio_layouted_frame.h>
 
@@ -444,12 +444,16 @@ void ImageView::saveImage()
     // take a snapshot before asking for the filename
     QImage img = ui_.image_frame->getImageCopy();
 
-    QString file_name = QFileDialog::getSaveFileName(widget_, tr("Save as image"), "image.png", tr("Image (*.bmp *.jpg *.png *.tiff)"));
+    //QString file_name = QFileDialog::getSaveFileName(widget_, tr("Save as image"), "image.png", tr("Image (*.bmp *.jpg *.png *.tiff)"));
+    boost::posix_time::ptime my_posix_time=ros::Time::now().toBoost();
+    std::string myisotime=boost::posix_time::to_iso_extended_string(my_posix_time);
+    QString file_name = "rqt_image_";
+    file_name.append(QString::fromStdString(myisotime));
+    file_name.append(".png");
     if (file_name.isEmpty())
     {
         return;
     }
-
     img.save(file_name);
 }
 
