@@ -76,7 +76,7 @@ void ImageView::initPlugin(qt_gui_cpp::PluginContext& context)
 
     connect(ui_.zoom_1_push_button, SIGNAL(toggled(bool)), this, SLOT(onZoom1(bool)));
 
-    connect(ui_.dynamic_range_check_box, SIGNAL(toggled(bool)), this, SLOT(onDynamicRange(bool)));
+    // connect(ui_.dynamic_range_check_box, SIGNAL(toggled(bool)), this, SLOT(onDynamicRange(bool)));
     connect(ui_.save_as_image_push_button, SIGNAL(pressed()), this, SLOT(saveImage()));
     connect(ui_.comboBoxOrientation, SIGNAL(currentIndexChanged(int)), this, SLOT(onComboBoxOrientation_currentIndexChanged(int)));
     connect(ui_.doubleSpinBoxRotation, SIGNAL(valueChanged(double)), this, SLOT(on_doubleSpinBoxRotation_valueChanged(double)));
@@ -141,7 +141,7 @@ void ImageView::saveSettings(qt_gui_cpp::Settings& plugin_settings, qt_gui_cpp::
     instance_settings.setValue("topic", topic);
     instance_settings.setValue("overlay_topic", overlay_topic);
     instance_settings.setValue("zoom1", ui_.zoom_1_push_button->isChecked());
-    instance_settings.setValue("dynamic_range", ui_.dynamic_range_check_box->isChecked());
+    //instance_settings.setValue("dynamic_range", ui_.dynamic_range_check_box->isChecked());
     instance_settings.setValue("controls_hidden", tools_hide_action->isChecked());
     instance_settings.setValue("max_range", ui_.max_range_double_spin_box->value());
     instance_settings.setValue("display_latency", ui_.display_latency_check_box->isChecked());
@@ -158,8 +158,8 @@ void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, con
     bool zoom1_checked = instance_settings.value("zoom1", false).toBool();
     ui_.zoom_1_push_button->setChecked(zoom1_checked);
 
-    bool dynamic_range_checked = instance_settings.value("dynamic_range", false).toBool();
-    ui_.dynamic_range_check_box->setChecked(dynamic_range_checked);
+    //bool dynamic_range_checked = instance_settings.value("dynamic_range", false).toBool();
+    //ui_.dynamic_range_check_box->setChecked(dynamic_range_checked);
 
     double max_range = instance_settings.value("max_range", ui_.max_range_double_spin_box->value()).toDouble();
     ui_.max_range_double_spin_box->setValue(max_range);
@@ -276,7 +276,7 @@ QSet<QString> ImageView::getTopics(const QSet<QString>& message_types, const QSe
     for (ros::master::V_TopicInfo::const_iterator it = topic_info.begin(); it != topic_info.end(); it++)
     {
         all_topics.insert(it->name.c_str());
-        qWarning() <<it->name.c_str() << it->datatype.c_str();
+        //qWarning() <<it->name.c_str() << it->datatype.c_str();
     }
 
     QSet<QString> topics;
@@ -369,7 +369,7 @@ void ImageView::onTopicChanged(int index)
             subscriber_ = it.subscribe(topic.toStdString(), 1, &ImageView::callbackImage, this, hints);
             //rotation_subscriber_ = nodeHandle.subscribe(topic.toStdString() + "_rotation", 1, &ImageView::callbackRotationChanged, this);
             //qDebug("ImageView::onTopicChanged() to topic '%s' with transport '%s'", topic.toStdString().c_str(), subscriber_.getTransport().c_str());
-            qWarning() << QString::fromStdString(topic.toStdString() + "_rotation");
+            //qWarning() << QString::fromStdString(topic.toStdString() + "_rotation");
         } catch (image_transport::TransportLoadException& e) {
             QMessageBox::warning(widget_, tr("Loading image transport plugin failed"), e.what());
             success = false;
@@ -431,6 +431,7 @@ void ImageView::onZoom1(bool checked)
 
 void ImageView::onDynamicRange(bool checked)
 {
+    return
     ui_.max_range_double_spin_box->setEnabled(!checked);
 }
 
@@ -604,6 +605,7 @@ void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
                 double min = 0;
                 double max = ui_.max_range_double_spin_box->value();
                 if (msg->encoding == "16UC1") max *= 1000;
+                /*
                 if (ui_.dynamic_range_check_box->isChecked())
                 {
                     // dynamically adjust range based on min/max in image
@@ -613,7 +615,7 @@ void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
                         min = 0;
                         max = 2;
                     }
-                }
+                }*/
                 cv::Mat img_scaled_8u;
                 cv::Mat(cv_ptr->image-min).convertTo(img_scaled_8u, CV_8UC1, 255. / (max - min));
                 cv::cvtColor(img_scaled_8u, conversion_mat_, CV_GRAY2RGB);
@@ -749,7 +751,7 @@ QList<QString> ImageView::getSupportedTransports()
 void ImageView::autoSelectOverLay(const QString & topicName)
 {
     if (topicName.length()==0) return;
-    qWarning() << "autoSelectOverLay()";
+    //qWarning() << "autoSelectOverLay()";
     QSet<QString> message_types;
     message_types.insert("sensor_msgs/Image");
     QSet<QString> message_sub_types;
@@ -777,7 +779,7 @@ void ImageView::autoSelectOverLay(const QString & topicName)
             break;
         }
     }
-    qWarning() << "autoSelectOverLay() vege";
+    //qWarning() << "autoSelectOverLay() vege";
 }
 
 } // end namespace rqt_image_view
