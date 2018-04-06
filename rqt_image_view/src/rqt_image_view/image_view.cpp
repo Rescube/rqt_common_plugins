@@ -72,7 +72,7 @@ void ImageView::initPlugin(qt_gui_cpp::PluginContext& context)
     connect(ui_.topics_combo_box, SIGNAL(currentIndexChanged(int)), this, SLOT(onTopicChanged(int)));
     connect(ui_.overlay_combo_box, SIGNAL(currentIndexChanged(int)), this, SLOT(onOverlayChanged(int)));
 
-    connect(ui_.refresh_topics_push_button, SIGNAL(toggled(bool)), this, SLOT(updateTopicList()));
+    connect(ui_.refresh_topics_push_button, SIGNAL(clicked()), this, SLOT(updateTopicList()));
 
     connect(ui_.zoom_1_push_button, SIGNAL(toggled(bool)), this, SLOT(onZoom1(bool)));
 
@@ -226,9 +226,15 @@ void ImageView::toggleCompressedTopicFilter(bool compressedonly) {
         QMessageBox::warning(widget_, tr("Runtime error"), e.what());
     }
 }
+void ImageView::updateTopicList_bool(bool toggle) {
+    qWarning() << "updateTopicList(bool) eleje";
+    updateTopicList();
+    qWarning() << "updateTopicList(bool) vege";
+}
 
 void ImageView::updateTopicList()
 {
+    qWarning() << "updateTopicList()";
     QSet<QString> message_types;
     message_types.insert("sensor_msgs/Image");
     QSet<QString> message_sub_types;
@@ -257,6 +263,7 @@ void ImageView::updateTopicList()
     // restore previous selection
     selectTopic(selected);
     selectOverlayTopic(selectedOverlay);
+    qWarning() << "updateTopicList() vege";
 }
 
 QList<QString> ImageView::getTopicList(const QSet<QString>& message_types, const QList<QString>& transports)
@@ -269,11 +276,12 @@ QSet<QString> ImageView::getTopics(const QSet<QString>& message_types, const QSe
 {
     ros::master::V_TopicInfo topic_info;
     ros::master::getTopics(topic_info);
-
+    qWarning() << "getTopics()";
     QSet<QString> all_topics;
     for (ros::master::V_TopicInfo::const_iterator it = topic_info.begin(); it != topic_info.end(); it++)
     {
         all_topics.insert(it->name.c_str());
+        qWarning() <<it->name.c_str() << it->datatype.c_str();
     }
 
     QSet<QString> topics;
@@ -284,9 +292,10 @@ QSet<QString> ImageView::getTopics(const QSet<QString>& message_types, const QSe
             QString topic = it->name.c_str();
 
             // if compressed filtering is set and the topic is uncompressed skip it!
-            if (ui_.toolButtonFilterCompressed->isChecked() && !topic.endsWith("compressed"))
-               continue;
-
+            if (ui_.toolButtonFilterCompressed->isChecked() && !topic.endsWith("compressed")) {
+                qWarning() << "   NOT compressed and we need compressed only" <<it->name.c_str() << it->datatype.c_str();
+                continue;
+            }
             topics.insert(topic);
             //qDebug("ImageView::getTopics() raw topic '%s'", topic.toStdString().c_str());
 
@@ -302,21 +311,26 @@ QSet<QString> ImageView::getTopics(const QSet<QString>& message_types, const QSe
                     //qDebug("ImageView::getTopics() transport specific sub-topic '%s'", sub.toStdString().c_str());
                 }
             }
-        }
-        if (message_sub_types.contains(it->datatype.c_str()))
-        {
-            QString topic = it->name.c_str();
-            int index = topic.lastIndexOf("/");
-            if (index != -1)
-            {
-                if (!topic.endsWith("compressed"))
-                    continue;
-                topic.replace(index, 1, " ");
-                topics.insert(topic);
-                //qDebug("ImageView::getTopics() transport specific sub-topic '%s'", topic.toStdString().c_str());
+        } else {
+            if (message_sub_types.contains(it->datatype.c_str())) {
+                QString topic = it->name.c_str();
+                int index = topic.lastIndexOf("/");
+                if (index != -1) {
+                    if (!topic.endsWith("compressed")) {
+                        qWarning() << "   NOT compressed " << it->name.c_str() << " " << it->datatype.c_str();
+                        continue;
+                    }
+                    qWarning() << "   MATCHING datatype" << it->name.c_str() << " " << it->datatype.c_str();
+                    topic.replace(index, 1, " ");
+                    topics.insert(topic);
+                    //qDebug("ImageView::getTopics() transport specific sub-topic '%s'", topic.toStdString().c_str());
+                }
+            } else {
+                qWarning() << "   NOT MATCHING datatype" << it->name.c_str() << " " << it->datatype.c_str();
             }
         }
     }
+    qWarning() << "getTopics() vege";
     return topics;
 }
 
@@ -724,6 +738,8 @@ QList<QString> ImageView::getSupportedTransports()
  */
 void ImageView::autoSelectOverLay(const QString & topicName)
 {
+    if (topicName.length()==0) return;
+    qWarning() << "autoSelectOverLay()";
     QSet<QString> message_types;
     message_types.insert("sensor_msgs/Image");
     QSet<QString> message_sub_types;
@@ -751,6 +767,7 @@ void ImageView::autoSelectOverLay(const QString & topicName)
             break;
         }
     }
+    qWarning() << "autoSelectOverLay() vege";
 }
 
 } // end namespace rqt_image_view
