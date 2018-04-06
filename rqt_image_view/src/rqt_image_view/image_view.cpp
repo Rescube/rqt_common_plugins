@@ -226,15 +226,10 @@ void ImageView::toggleCompressedTopicFilter(bool compressedonly) {
         QMessageBox::warning(widget_, tr("Runtime error"), e.what());
     }
 }
-void ImageView::updateTopicList_bool(bool toggle) {
-    qWarning() << "updateTopicList(bool) eleje";
-    updateTopicList();
-    qWarning() << "updateTopicList(bool) vege";
-}
 
-void ImageView::updateTopicList()
+    void ImageView::updateTopicList()
 {
-    qWarning() << "updateTopicList()";
+    //qWarning() << "updateTopicList()";
     QSet<QString> message_types;
     message_types.insert("sensor_msgs/Image");
     QSet<QString> message_sub_types;
@@ -263,7 +258,7 @@ void ImageView::updateTopicList()
     // restore previous selection
     selectTopic(selected);
     selectOverlayTopic(selectedOverlay);
-    qWarning() << "updateTopicList() vege";
+    //qWarning() << "updateTopicList() vege";
 }
 
 QList<QString> ImageView::getTopicList(const QSet<QString>& message_types, const QList<QString>& transports)
@@ -276,7 +271,7 @@ QSet<QString> ImageView::getTopics(const QSet<QString>& message_types, const QSe
 {
     ros::master::V_TopicInfo topic_info;
     ros::master::getTopics(topic_info);
-    qWarning() << "getTopics()";
+    //qWarning() << "getTopics()";
     QSet<QString> all_topics;
     for (ros::master::V_TopicInfo::const_iterator it = topic_info.begin(); it != topic_info.end(); it++)
     {
@@ -293,7 +288,7 @@ QSet<QString> ImageView::getTopics(const QSet<QString>& message_types, const QSe
 
             // if compressed filtering is set and the topic is uncompressed skip it!
             if (ui_.toolButtonFilterCompressed->isChecked() && !topic.endsWith("compressed")) {
-                qWarning() << "   NOT compressed and we need compressed only" <<it->name.c_str() << it->datatype.c_str();
+                //qWarning() << "   NOT compressed and we need compressed only" <<it->name.c_str() << it->datatype.c_str();
                 continue;
             }
             topics.insert(topic);
@@ -317,20 +312,20 @@ QSet<QString> ImageView::getTopics(const QSet<QString>& message_types, const QSe
                 int index = topic.lastIndexOf("/");
                 if (index != -1) {
                     if (!topic.endsWith("compressed")) {
-                        qWarning() << "   NOT compressed " << it->name.c_str() << " " << it->datatype.c_str();
+                        //qWarning() << "   NOT compressed " << it->name.c_str() << " " << it->datatype.c_str();
                         continue;
                     }
-                    qWarning() << "   MATCHING datatype" << it->name.c_str() << " " << it->datatype.c_str();
+                    // qWarning() << "   MATCHING datatype" << it->name.c_str() << " " << it->datatype.c_str();
                     topic.replace(index, 1, " ");
                     topics.insert(topic);
                     //qDebug("ImageView::getTopics() transport specific sub-topic '%s'", topic.toStdString().c_str());
                 }
             } else {
-                qWarning() << "   NOT MATCHING datatype" << it->name.c_str() << " " << it->datatype.c_str();
+                // qWarning() << "   NOT MATCHING datatype" << it->name.c_str() << " " << it->datatype.c_str();
             }
         }
     }
-    qWarning() << "getTopics() vege";
+    //qWarning() << "getTopics() vege";
     return topics;
 }
 
@@ -448,6 +443,10 @@ void ImageView::saveImage()
     boost::posix_time::ptime my_posix_time=ros::Time::now().toBoost();
     std::string myisotime=boost::posix_time::to_iso_extended_string(my_posix_time);
     QString file_name = "rqt_image_";
+    std::string topic=subscriber_.getTopic();
+    QStringList sl=QString::fromStdString(topic).split("/",QString::SkipEmptyParts);
+    file_name.append(sl.first());
+    file_name.append("_");
     file_name.append(QString::fromStdString(myisotime));
     file_name.append(".png");
     if (file_name.isEmpty())
@@ -466,7 +465,11 @@ void ImageView::onMousePublish(bool checked)
     } else {
         if(!subscriber_.getTopic().empty())
         {
-            topicName = subscriber_.getTopic()+"_mouse_left";
+            QString qtn=QString::fromStdString(subscriber_.getTopic());
+            QStringList parts = qtn.split("/", QString::SkipEmptyParts);
+            QString firstpart = parts.first().append("_mouse_left");
+            topicName = firstpart.toStdString(); // this way we always get the same button topic when using compressed or uncompressed topics
+            // qWarning() << "Mouse topic name: " << firstpart;
         } else {
             topicName = "mouse_left";
         }
@@ -487,8 +490,11 @@ void ImageView::onMouseLeft(int x, int y)
     {
         geometry_msgs::Point clickLocation;
         // Publish click location in pixel coordinates
-        clickLocation.x = round((double)x/(double)ui_.image_frame->width()*(double)ui_.image_frame->getImage().width());
-        clickLocation.y = round((double)y/(double)ui_.image_frame->height()*(double)ui_.image_frame->getImage().height());
+        clickLocation.x = (double)x/(double)ui_.image_frame->width();
+        clickLocation.y = (double)y/(double)ui_.image_frame->height();
+//  These are the coordinates, but as the source image size could change, so that is "unknown" we need the click in horizontal and vertical RATIO
+//        clickLocation.x = round((double)x/(double)ui_.image_frame->width()*(double)ui_.image_frame->getImage().width());
+//        clickLocation.y = round((double)y/(double)ui_.image_frame->height()*(double)ui_.image_frame->getImage().height());
         clickLocation.z = 0;
         pub_mouse_left_.publish(clickLocation);
     }
